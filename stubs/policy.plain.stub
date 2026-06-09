@@ -1,0 +1,24 @@
+<?php
+
+namespace {{ namespace }};
+
+use {{ namespacedUserModel }};
+
+class {{ class }}
+{
+    /**
+     * Determine whether the user can perform any action.
+     */
+    public function before({{ user }} $user, string $ability): bool|null
+    {
+        return $user->role === {{ namespacedUserModel }}::ROLE_ADMIN ? true : null;
+    }
+
+    /**
+     * Create a new policy instance.
+     */
+    public function __construct()
+    {
+        //
+    }
+}
