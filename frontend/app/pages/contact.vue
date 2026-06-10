@@ -1,5 +1,5 @@
 <template>
-  <div class="w-full bg-slate-50 px-6 py-14 flex-1 flex items-center justify-center">
+  <div class="bg-slate-50 px-6 py-14">
 
     <div class="w-full max-w-4xl mx-auto rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
 
@@ -55,7 +55,7 @@
           <el-button
             type="primary"
             @click="onSubmit"
-            class="!bg-[#1A439C] !border-[#1A439C] hover:!bg-[#4367b3] text-white"
+            class="!bg-[#0d0d0e] !border-[#333a49] hover:!bg-[#e5e6e9] text-white hover:!text-black"
           >
             Submit
           </el-button>
@@ -96,40 +96,39 @@ const rules = reactive<FormRules>({
   message: [{ required: true, message: 'Message is Required', trigger: 'blur' }]
 })
 
-const onSubmit = async () => {
+const onSubmit = () => {
   const formEl = formRef.value
   if (!formEl) return
 
-  await formEl.validate(async (valid) => {
+  formEl.validate(async (valid) => {
     if (valid) {
-      console.log('Form Data Submitted:', form)
       try {
-        const response = await $fetch('http://localhost:8000/api/contact', {
+        // Pastikan await $fetch ini selesai dengan benar
+        await $fetch('http://localhost:8000/api/contact', {
           method: 'POST',
           body: { ...form }
-        })
+        });
 
         ElMessage({
           message: 'Inquiry Form Submitted & Email Sent Successfully!',
           type: 'success',
-        })
+        });
 
-        formEl.resetFields()
+        formEl.resetFields();
       } catch (error) {
-        console.error('Gagal mengirim data ke Laravel:', error)
+        console.error('Gagal:', error);
         ElNotification({
           title: 'Submission Failed',
-          message: 'Could not connect to the server or database error occur.',
+          message: 'Terjadi kesalahan pada server.',
           type: 'error',
-        })
+        });
       }
     } else {
       ElNotification({
         title: 'Error',
         message: 'Please Complete the Form Correctly',
         type: 'error',
-      })
+      });
     }
   })
-}
-</script>
+}</script>

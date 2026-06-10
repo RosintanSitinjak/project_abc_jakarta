@@ -1,8 +1,9 @@
 <template>
   <div class="min-h-[70vh] bg-slate-50">
-    <div class="relative overflow-hidden bg-gradient-to-br from-slate-50 via-white to-blue-50">
-      <div class="pointer-events-none absolute -top-32 right-0 h-80 w-80 rounded-full bg-blue-200/40 blur-3xl"></div>
-      <div class="pointer-events-none absolute -bottom-32 left-0 h-96 w-96 rounded-full bg-blue-100/60 blur-3xl"></div>
+    <div class="relative overflow-hidden bg-gradient-to-br from-slate-50 via-white to-neutral-100">
+      
+      <div class="pointer-events-none absolute -top-32 right-0 h-80 w-80 rounded-full bg-neutral-200/40 blur-3xl"></div>
+      <div class="pointer-events-none absolute -bottom-32 left-0 h-96 w-96 rounded-full bg-neutral-200/40 blur-3xl"></div>
 
       <div class="mx-auto flex min-h-[70vh] max-w-2xl flex-col items-center justify-center px-4 sm:px-6 py-10">
         <div class="w-full max-w-md rounded-3xl border border-slate-200 bg-white/90 p-8 shadow-xl backdrop-blur">
@@ -11,7 +12,7 @@
             <h1 class="mt-3 text-3xl font-semibold text-slate-900">Sign In</h1>
           </div>
 
-          <el-form ref="formRef" :model="form" :rules="rules" label-position="top" class="mt-8">
+          <el-form ref="formRef" :model="form" :rules="rules" label-position="top" class="mt-8 custom-clean-form">
             <el-form-item label="Email" prop="email">
               <el-input @keydown.enter="submitForm" v-model="form.email" placeholder="admin@lamsolusi.com" />
             </el-form-item>
@@ -20,11 +21,16 @@
             </el-form-item>
 
             <div class="mb-6 flex items-center justify-between text-sm">
-              <el-checkbox v-model="form.remember">Remember me</el-checkbox>
+              <el-checkbox v-model="form.remember" class="clean-checkbox">Remember me</el-checkbox>
               <span class="text-slate-400">Secure access</span>
             </div>
 
-            <el-button type="primary" class="w-full" :loading="isSubmitting" @click="submitForm">
+            <el-button 
+              type="primary" 
+              class="w-full !h-11 !rounded-xl !bg-black !border-black !text-white hover:!bg-neutral-800 hover:!border-neutral-800 font-bold uppercase tracking-widest text-xs transition duration-300" 
+              :loading="isSubmitting" 
+              @click="submitForm"
+            >
               Masuk
             </el-button>
           </el-form>
@@ -39,7 +45,6 @@ import { ElMessage, ElNotification } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
 import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
-// import { useApi } from '~/composables/useApi'
 import { useApi } from '../../composables/useApi'
 
 definePageMeta({
@@ -104,3 +109,17 @@ const submitForm = async () => {
   })
 }
 </script>
+
+<style scoped>
+:deep(.custom-clean-form .el-input__wrapper.is-focus) {
+  box-shadow: 0 0 0 1px #171717 inset !important;
+}
+
+:deep(.clean-checkbox.is-checked .el-checkbox__inner) {
+  background-color: #000000 !important;
+  border-color: #000000 !important;
+}
+:deep(.clean-checkbox.is-checked .el-checkbox__label) {
+  color: #000000 !important;
+}
+</style>

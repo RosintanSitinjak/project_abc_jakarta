@@ -14,6 +14,7 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->trustProxies(at: '*');
+        
         $middleware->api(append: [
             \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
         ]);
@@ -22,10 +23,16 @@ return Application::configure(basePath: dirname(__DIR__))
             'role' => \App\Http\Middleware\RoleMiddleware::class,
         ]);
 
+        // $middleware->validateCsrfTokens(except: [
+        //     'api/public/visitor',
+        //     'api/v1/contact',
+        //     'v1/contact',
+        //     'api/contact',
+        // ]);
+
         $middleware->validateCsrfTokens(except: [
-            'api/public/visitor',
-            'api/contact', 
-        ]);
+    'api/*', // Ini akan mem-bypass CSRF untuk SEMUA rute yang diawali /api/
+]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

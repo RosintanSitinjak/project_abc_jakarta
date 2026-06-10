@@ -5,7 +5,6 @@ use App\Http\Controllers\AttachmentController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\ClientController;
-use App\Http\Controllers\ContactController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\PortfolioController;
 use App\Http\Controllers\PublicPortfolioController;
@@ -41,7 +40,21 @@ Route::post('/broadcast/hello', function (Request $request) {
     ];
 });
 
-Route::post('/contact', [ContactController::class, 'store'])->middleware('throttle:1,2');
+// =========================================================================
+// RUTE PUBLIK UTAMA (Form Kontak)
+// =========================================================================
+// Route::post('/contact', [\App\Http\Controllers\ContactController::class, 'store'])->middleware('throttle:1,2');
+
+// Route::post('/contact', function () {
+//     return response()->json([
+//         'success' => true,
+//         'message' => 'Route reached'
+//     ]);
+// });
+
+// Di routes/api.php
+Route::post('/contact', [\App\Http\Controllers\ContactController::class, 'store']);
+
 Route::post('/auth/login', [AuthController::class, 'login']);
 Route::post('/auth/logout', [AuthController::class, 'logout'])->middleware(['auth:sanctum']);
 
@@ -60,6 +73,9 @@ Route::apiResource('user-management', \App\Http\Controllers\UserManagementContro
 
 Route::middleware('auth:sanctum')->get('/dashboard', [\App\Http\Controllers\DashboardController::class, 'index']);
 
+// =========================================================================
+// GRUP RUTE PUBLIK WEBSITE
+// =========================================================================
 Route::prefix('public')->group(function () {
     Route::get('services', [PublicServiceController::class, 'index']);
     Route::get('products', [PublicProductController::class, 'index']);
@@ -70,6 +86,9 @@ Route::prefix('public')->group(function () {
     Route::post('visitor', [\App\Http\Controllers\VisitorController::class, 'store']);
 });
 
+// =========================================================================
+// GRUP RUTE DASHBOARD ADMIN (PROTECTED SANCTUM)
+// =========================================================================
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('articles/upload-image', \App\Http\Controllers\ArticleImageController::class);
     Route::apiResource('articles', \App\Http\Controllers\ArticleController::class);

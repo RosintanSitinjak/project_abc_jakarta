@@ -18,35 +18,61 @@
 
       <div class="mt-6 overflow-x-auto -mx-4 sm:-mx-6 px-4 sm:px-6">
         <el-table :data="paginatedArticles" row-key="id" stripe v-loading="loading" class="min-w-[700px] w-full" @sort-change="handleSort" :default-sort="{ prop: 'title', order: 'ascending' }">
-          <el-table-column prop="title" sortable="custom" label="Title" min-width="200" show-overflow-tooltip />
-          <el-table-column prop="author.name" sortable="custom" label="Author" min-width="150" show-overflow-tooltip>
-            <template #default="{ row }">
-              {{ row.author?.name || 'Unknown' }}
-            </template>
-          </el-table-column>
-          <el-table-column label="Thumbnail" min-width="180">
-            <template #default="{ row }">
-              <div class="flex items-center gap-3">
-                <el-image
-                  v-if="row.thumbnail?.url"
-                  :src="row.thumbnail.url"
-                  fit="cover"
-                  class="h-10 w-16 rounded-lg border border-slate-100 bg-white"
-                />
-                <span v-else class="text-sm text-[var(--slate-500)]">No Thumbnail</span>
-              </div>
-            </template>
-          </el-table-column>
-          <el-table-column label="Actions" width="150" align="center">
-            <template #default="{ row }">
-              <el-button text type="primary" aria-label="Edit" @click="openEdit(row)">
-                <Icon icon="solar:pen-2-outline" class="text-lg" />
-              </el-button>
-              <el-button text type="danger" aria-label="Delete" @click="confirmDelete(row)">
-                <Icon icon="solar:trash-bin-trash-outline" class="text-lg" />
-              </el-button>
-            </template>
-          </el-table-column>
+         <el-table-column prop="title" sortable="custom" label="Title" min-width="200" show-overflow-tooltip />
+<el-table-column prop="author.name" sortable="custom" label="Author" min-width="150" show-overflow-tooltip>
+  <template #default="{ row }">
+    {{ row.author?.name || 'Unknown' }}
+  </template>
+</el-table-column>
+
+<el-table-column label="Thumbnail" min-width="180">
+  <template #default="scope">
+    <div class="flex items-center gap-3">
+      <el-image
+        v-if="scope.row.thumbnail?.url"
+        :src="scope.row.thumbnail.url"
+        fit="cover"
+        class="h-10 w-16 rounded-lg border border-slate-100 bg-white shadow-sm"
+      >
+        <template #error>
+          <div class="flex h-full w-full items-center justify-center bg-slate-100 text-xs text-slate-400">
+            Error Url
+          </div>
+        </template>
+      </el-image>
+      <span v-else class="text-sm text-slate-400">No Thumbnail</span>
+    </div>
+  </template>
+</el-table-column>
+          
+
+          <el-table-column label="Actions" width="160" align="center">
+  <template #default="scope">
+    <div class="flex items-center justify-center gap-2">
+      
+      <el-button 
+        type="primary" 
+        size="small"
+        plain
+        aria-label="Edit" 
+        @click="openEdit(scope.row)"
+      >
+        <el-icon class="mr-1"><Edit /></el-icon> Edit
+      </el-button>
+      
+      <el-button 
+        type="danger" 
+        size="small"
+        aria-label="Delete" 
+        @click="confirmDelete(scope.row)"
+      >
+        <el-icon class="mr-1"><Delete /></el-icon> Hapus
+      </el-button>
+
+    </div>
+  </template>
+</el-table-column>
+
         </el-table>
       </div>
 
@@ -68,6 +94,8 @@
 
 <script lang="ts" setup>
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { Edit, Delete } from '@element-plus/icons-vue' 
+
 import type { UploadUserFile } from 'element-plus'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
@@ -102,12 +130,35 @@ const handleSort = ({ prop, order }: { prop: string | null, order: string | null
   loadArticles()
 }
 
+// const mapAttachment = (attachment: AttachmentApi | null): UploadUserFile | null => {
+//   if (!attachment) return null
+//   return {
+//     uid: attachment.id as any,
+//     name: attachment.name,
+//     url: attachment.path,
+//   }
+// }
+
 const mapAttachment = (attachment: AttachmentApi | null): UploadUserFile | null => {
   if (!attachment) return null
+  
+  const originalPath = attachment.path || ''
+
+  // Jika path sudah lengkap (mengandung http), langsung pakai.
+  // Jika berupa path relatif (misal: /storage/attachments/abc.jpg atau attachments/abc.jpg), 
+  // kita sambungkan dengan domain utama Laravel Backend kamu.
+  let fullUrl = originalPath
+  if (!originalPath.startsWith('http')) {
+    const basePath = originalPath.startsWith('/') ? originalPath : `/${originalPath}`
+    
+    // Seringkali Laravel menyimpan ke public storage, pastikan url mengarah ke port Laravel-mu (misal: 8000)
+    fullUrl = `http://127.0.0.1:8000${basePath}` 
+  }
+
   return {
     uid: attachment.id as any,
     name: attachment.name,
-    url: attachment.path,
+    url: fullUrl,
   }
 }
 
