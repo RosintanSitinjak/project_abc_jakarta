@@ -49,12 +49,12 @@ definePageMeta({
 })
 
 const route = useRoute()
-const articleId = route.params.id
+const articleSlug = route.params.slug as string
 
 // Menggunakan global fetch bawaan Nuxt untuk memotong bypass auth header token
-const { data: article, status } = await useAsyncData(`direct-detail-${articleId}`, async () => {
+const { data: article, status } = await useAsyncData(`direct-detail-${articleSlug}`, async () => {
   try {
-    const response = await $fetch<any>(`http://localhost:8000/api/articles/${articleId}`)
+    const response = await $fetch<any>(`http://localhost:8000/api/public/articles/${articleSlug}`)
     const data = response?.data ? response.data : response
     
     if (!data) return null

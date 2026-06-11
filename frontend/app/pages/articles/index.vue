@@ -52,7 +52,7 @@
 
             <div class="mt-6 pt-4 border-t border-neutral-100 flex items-center justify-between">
               <NuxtLink 
-                :to="`/articles/${item.id}`"
+                :to="`/articles/${item.slug}`"
                 class="text-xs uppercase tracking-widest font-bold text-neutral-900 hover:text-neutral-500 transition duration-300 flex items-center gap-2"
               >
                 Baca Selengkapnya →
@@ -78,7 +78,7 @@ const { apiFetch, unwrap } = useApi()
 
 const { data: articles, status } = await useAsyncData('public-articles', async () => {
   try {
-    const response = await apiFetch<any>('/articles')
+    const response = await apiFetch<any>('/public/articles')
     const rawData = unwrap(response)
     
     const articlesArray = rawData?.data || rawData || []
@@ -96,6 +96,7 @@ const { data: articles, status } = await useAsyncData('public-articles', async (
   
       return {
         id: item.id,
+        slug: item.slug,
         title: item.title,
         description: item.description,
         author: item.author,
