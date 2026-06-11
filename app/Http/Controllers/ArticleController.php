@@ -14,17 +14,19 @@ class ArticleController extends Controller
 {
     use ManagesAttachments;
 
-
     /**
-     * Display a listing of the resource.
+     * Display a listing of the resource (Public Landing Page).
      */
     public function index(Request $request)
     {
-        $query = Article::with(['thumbnail', 'author'])
-            ->when($request->search, function ($query, $search) {
-                $query->where('title', 'ilike', '%' . $search . '%')
-                    ->orWhere('description', 'ilike', '%' . $search . '%');
+        $query = Article::with(['thumbnail', 'author']);
+
+        $query->when($request->search, function ($query, $search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('title', 'ilike', '%' . $search . '%')
+                  ->orWhere('description', 'ilike', '%' . $search . '%');
             });
+        });
 
         if ($request->filled('sort_by')) {
             $sortOrder = $request->input('sort_order', 'asc');
@@ -47,6 +49,45 @@ class ArticleController extends Controller
     }
 
     /**
+     * Display a listing of the resource for Dashboard Admin (Protected Sanctum).
+     */
+    public function dashboardIndex(Request $request)
+    {
+        $query = Article::with(['thumbnail', 'author']);
+        $user = Auth::user();
+
+        if ($user && !$user->isAdmin()) {
+            $query->where('author_id', $user->id);
+        }
+
+        $query->when($request->search, function ($query, $search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('title', 'ilike', '%' . $search . '%')
+                  ->orWhere('description', 'ilike', '%' . $search . '%');
+            });
+        });
+
+        if ($request->filled('sort_by')) {
+            $sortOrder = $request->input('sort_order', 'asc');
+            $sortBy = $request->sort_by;
+
+            if ($sortBy === 'author.name') {
+                $query->select('articles.*')
+                      ->leftJoin('users', 'articles.author_id', '=', 'users.id')
+                      ->orderBy('users.name', $sortOrder);
+            } else {
+                $query->orderBy($sortBy, $sortOrder);
+            }
+        } else {
+            $query->latest();
+        }
+
+        $articles = $query->get();
+
+        return response()->json($articles);
+    }
+
+    /**
      * Store a newly created resource in storage.
      */
     public function store(Request $request)
@@ -58,13 +99,11 @@ class ArticleController extends Controller
         ]);
 
         $validated['author_id'] = Auth::id();
-
         $thumbnailId = $validated['thumbnail_id'] ?? null;
         unset($validated['thumbnail_id']);
 
         $validated['slug'] = Str::slug($validated['title']);
         
-        // Ensure slug is unique, even among soft-deleted records
         $count = Article::withTrashed()->where('slug', 'LIKE', "{$validated['slug']}%")->count();
         if ($count > 0) {
             $validated['slug'] .= '-' . ($count + 1);
@@ -97,6 +136,14 @@ class ArticleController extends Controller
      */
     public function update(Request $request, Article $article)
     {
+        $user = Auth::user();
+
+        // PERBAIKAN LOGIKA: Jika dia BUKAN admin DAN DIA BUKAN pemilik asli artikelnya, baru kita TOLAK!
+        // Jika dia adalah Admin, maka kondisi if ini akan dilewati (lolos akses).
+        if (!$user->isAdmin() && $article->author_id !== $user->id) {
+            return response()->json(['message' => 'Unauthorized. Kamu tidak memiliki akses untuk mengedit artikel ini.'], 403);
+        }
+
         $validated = $request->validate([
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
@@ -117,7 +164,13 @@ class ArticleController extends Controller
         DB::beginTransaction();
         try {
             $article->update($validated);
-            $article->update(['author_id' => Auth::id()]);
+            
+            // Pengaman tambahan: Jangan timpa author_id menjadi milik Admin jika Admin yang mengedit.
+            // Biarkan artikel tersebut tetap milik Writer aslinya.
+            if (!$user->isAdmin()) {
+                $article->update(['author_id' => $user->id]);
+            }
+            
             $this->setSingleAttachment($article, 'thumbnail', $thumbnailId, 'thumbnail');
 
             DB::commit();
@@ -134,6 +187,13 @@ class ArticleController extends Controller
      */
     public function destroy(Article $article)
     {
+        $user = Auth::user();
+
+        // PERBAIKAN LOGIKA: Izinkan Admin untuk menghapus artikel siapa saja.
+        if (!$user->isAdmin() && $article->author_id !== $user->id) {
+            return response()->json(['message' => 'Unauthorized. Kamu tidak memiliki akses untuk menghapus artikel ini.'], 403);
+        }
+
         $article->delete();
         return response()->json(null, 204);
     }

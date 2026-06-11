@@ -90,6 +90,8 @@ Route::prefix('public')->group(function () {
 // GRUP RUTE DASHBOARD ADMIN (PROTECTED SANCTUM)
 // =========================================================================
 Route::middleware('auth:sanctum')->group(function () {
+    Route::get('dashboard/articles', [\App\Http\Controllers\ArticleController::class, 'dashboardIndex']);
+    
     Route::post('articles/upload-image', \App\Http\Controllers\ArticleImageController::class);
     Route::apiResource('articles', \App\Http\Controllers\ArticleController::class);
     Route::apiResource('contacts', \App\Http\Controllers\Admin\ContactController::class)->only(['index', 'show', 'update']);

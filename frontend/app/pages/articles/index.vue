@@ -45,7 +45,7 @@
                 {{ item.title }}
               </h2>
               
-              <p class="text-neutral-500 text-sm leading-relaxed line-clamp-3">
+              <p class="text-neutral-500 text-sm leading-relaxed line-relaxed line-clamp-3">
                 {{ cleanDescription(item.description) }}
               </p>
             </div>
@@ -76,10 +76,8 @@ definePageMeta({
 
 const { apiFetch, unwrap } = useApi()
 
-// Menggunakan useApi kembali agar terhindar dari Error 500 fetch failed
 const { data: articles, status } = await useAsyncData('public-articles', async () => {
   try {
-    // Kita gunakan endpoint dasar /articles terlebih dahulu demi memulihkan list
     const response = await apiFetch<any>('/articles')
     const rawData = unwrap(response)
     

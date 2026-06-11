@@ -17,62 +17,66 @@
       </div>
 
       <div class="mt-6 overflow-x-auto -mx-4 sm:-mx-6 px-4 sm:px-6">
-        <el-table :data="paginatedArticles" row-key="id" stripe v-loading="loading" class="min-w-[700px] w-full" @sort-change="handleSort" :default-sort="{ prop: 'title', order: 'ascending' }">
-         <el-table-column prop="title" sortable="custom" label="Title" min-width="200" show-overflow-tooltip />
-<el-table-column prop="author.name" sortable="custom" label="Author" min-width="150" show-overflow-tooltip>
-  <template #default="{ row }">
-    {{ row.author?.name || 'Unknown' }}
-  </template>
-</el-table-column>
+        <el-table 
+          :data="paginatedArticles" 
+          row-key="id" 
+          stripe 
+          v-loading="loading" 
+          class="min-w-[700px] w-full" 
+          @sort-change="handleSort" 
+          :default-sort="{ prop: 'title', order: 'ascending' }"
+        >
+          <el-table-column prop="title" sortable="custom" label="Title" min-width="200" show-overflow-tooltip />
+          <el-table-column prop="author.name" sortable="custom" label="Author" min-width="150" show-overflow-tooltip>
+            <template #default="{ row }">
+              {{ row.author?.name || 'Unknown' }}
+            </template>
+          </el-table-column>
 
-<el-table-column label="Thumbnail" min-width="180">
-  <template #default="scope">
-    <div class="flex items-center gap-3">
-      <el-image
-        v-if="scope.row.thumbnail?.url"
-        :src="scope.row.thumbnail.url"
-        fit="cover"
-        class="h-10 w-16 rounded-lg border border-slate-100 bg-white shadow-sm"
-      >
-        <template #error>
-          <div class="flex h-full w-full items-center justify-center bg-slate-100 text-xs text-slate-400">
-            Error Url
-          </div>
-        </template>
-      </el-image>
-      <span v-else class="text-sm text-slate-400">No Thumbnail</span>
-    </div>
-  </template>
-</el-table-column>
-          
+          <el-table-column label="Thumbnail" min-width="180">
+            <template #default="scope">
+              <div class="flex items-center gap-3">
+                <el-image
+                  v-if="scope.row.thumbnail?.url"
+                  :src="scope.row.thumbnail.url"
+                  fit="cover"
+                  class="h-10 w-16 rounded-lg border border-slate-100 bg-white shadow-sm"
+                >
+                  <template #error>
+                    <div class="flex h-full w-full items-center justify-center bg-slate-100 text-xs text-slate-400">
+                      Error Url
+                    </div>
+                  </template>
+                </el-image>
+                <span v-else class="text-sm text-slate-400">No Thumbnail</span>
+              </div>
+            </template>
+          </el-table-column>
 
           <el-table-column label="Actions" width="160" align="center">
-  <template #default="scope">
-    <div class="flex items-center justify-center gap-2">
-      
-      <el-button 
-        type="primary" 
-        size="small"
-        plain
-        aria-label="Edit" 
-        @click="openEdit(scope.row)"
-      >
-        <el-icon class="mr-1"><Edit /></el-icon> Edit
-      </el-button>
-      
-      <el-button 
-        type="danger" 
-        size="small"
-        aria-label="Delete" 
-        @click="confirmDelete(scope.row)"
-      >
-        <el-icon class="mr-1"><Delete /></el-icon> Hapus
-      </el-button>
-
-    </div>
-  </template>
-</el-table-column>
-
+            <template #default="scope">
+              <div class="flex items-center justify-center gap-2">
+                <el-button 
+                  type="primary" 
+                  size="small"
+                  plain
+                  aria-label="Edit" 
+                  @click="openEdit(scope.row)"
+                >
+                  <el-icon class="mr-1"><Edit /></el-icon> Edit
+                </el-button>
+                
+                <el-button 
+                  type="danger" 
+                  size="small"
+                  aria-label="Delete" 
+                  @click="confirmDelete(scope.row)"
+                >
+                  <el-icon class="mr-1"><Delete /></el-icon> Hapus
+                </el-button>
+              </div>
+            </template>
+          </el-table-column>
         </el-table>
       </div>
 
@@ -113,6 +117,9 @@ const pageSize = ref(10)
 const searchQuery = ref('')
 const searchTimeout = ref<ReturnType<typeof setTimeout> | null>(null)
 
+// Flag pengunci untuk mencegah double fetch saat inisialisasi awal component
+const isInitialMounted = ref(false)
+
 const paginatedArticles = computed(() => {
   const start = (currentPage.value - 1) * pageSize.value
   return articles.value.slice(start, start + pageSize.value)
@@ -127,31 +134,21 @@ const sortOrder = ref<string>('ascending')
 const handleSort = ({ prop, order }: { prop: string | null, order: string | null }) => {
   sortProp.value = prop || 'title'
   sortOrder.value = order || 'ascending'
-  loadArticles()
+  
+  // Hanya jalankan fetch jika proses onMounted sudah selesai sepenuhnya,
+  // untuk menghindari tabrakan fetch ganda (infinite loop)
+  if (isInitialMounted.value) {
+    loadArticles(false)
+  }
 }
-
-// const mapAttachment = (attachment: AttachmentApi | null): UploadUserFile | null => {
-//   if (!attachment) return null
-//   return {
-//     uid: attachment.id as any,
-//     name: attachment.name,
-//     url: attachment.path,
-//   }
-// }
 
 const mapAttachment = (attachment: AttachmentApi | null): UploadUserFile | null => {
   if (!attachment) return null
   
   const originalPath = attachment.path || ''
-
-  // Jika path sudah lengkap (mengandung http), langsung pakai.
-  // Jika berupa path relatif (misal: /storage/attachments/abc.jpg atau attachments/abc.jpg), 
-  // kita sambungkan dengan domain utama Laravel Backend kamu.
   let fullUrl = originalPath
   if (!originalPath.startsWith('http')) {
     const basePath = originalPath.startsWith('/') ? originalPath : `/${originalPath}`
-    
-    // Seringkali Laravel menyimpan ke public storage, pastikan url mengarah ke port Laravel-mu (misal: 8000)
     fullUrl = `http://127.0.0.1:8000${basePath}` 
   }
 
@@ -179,10 +176,11 @@ const openEdit = (article: Article) => {
   router.push(`/admin/articles/${article.id}`)
 }
 
-const loadArticles = async () => {
+const loadArticles = async (resetPage = true) => {
   loading.value = true
   try {
     const query = new URLSearchParams()
+
     if (searchQuery.value) {
       query.append('search', searchQuery.value)
     }
@@ -190,10 +188,28 @@ const loadArticles = async () => {
       query.append('sort_by', sortProp.value)
       query.append('sort_order', sortOrder.value === 'descending' ? 'desc' : 'asc')
     }
-    // We send request to index, since it has pagination
-    const response = await apiFetch<ArticleApi[] | { data: ArticleApi[] }>(`/articles?${query.toString()}`)
-    articles.value = unwrap(response).map(mapArticle)
-    currentPage.value = 1
+    
+    // Paksa bypass cache Nuxt 4 via timestamp parameter agar perpindahan user langsung ter-refresh otomatis
+    query.append('t', Date.now().toString())
+
+    const response = await apiFetch<any>(`/dashboard/articles?${query.toString()}`)
+    const unwrappedData = unwrap(response)
+    
+    // PERBAIKAN LOGIKA PARSING ARRAY: Mengakomodasi return `get()` maupun `paginate()` dari Laravel 12
+    let dataArray: any[] = []
+    if (Array.isArray(unwrappedData)) {
+      dataArray = unwrappedData
+    } else if (unwrappedData && Array.isArray(unwrappedData.data)) {
+      dataArray = unwrappedData.data
+    } else if (unwrappedData && typeof unwrappedData === 'object') {
+      dataArray = Object.values(unwrappedData)
+    }
+
+    articles.value = dataArray.map(mapArticle)
+    
+    if (resetPage) {
+      currentPage.value = 1
+    }
   } catch (error) {
     ElMessage.error(getErrorMessage(error, 'Failed to load articles.'))
   } finally {
@@ -204,11 +220,9 @@ const loadArticles = async () => {
 watch(searchQuery, () => {
   if (searchTimeout.value) clearTimeout(searchTimeout.value)
   searchTimeout.value = setTimeout(() => {
-    loadArticles()
+    loadArticles(true)
   }, 300)
 })
-
-
 
 const confirmDelete = async (article: Article) => {
   try {
@@ -234,7 +248,10 @@ const confirmDelete = async (article: Article) => {
   }
 }
 
-onMounted(() => {
-  loadArticles()
+onMounted(async () => {
+  // Selesaikan load data awal komponen pertama kali
+  await loadArticles(true)
+  // Buka kunci flag setelah fetch sukses, sehingga fitur sort Element Plus aman digunakan tanpa loop balik
+  isInitialMounted.value = true
 })
 </script>
