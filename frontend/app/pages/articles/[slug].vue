@@ -1,10 +1,12 @@
 <template>
   <div class="min-h-screen bg-white py-12 px-4 sm:px-6">
+    <!-- State: Loading -->
     <div v-if="status === 'pending'" class="flex flex-col justify-center items-center min-h-[50vh] space-y-3">
       <el-icon class="is-loading text-2xl text-neutral-900"><Loading /></el-icon>
       <span class="text-xs uppercase tracking-widest text-neutral-400 font-medium">Memuat Isi Artikel...</span>
     </div>
 
+    <!-- State: Artikel Ditemukan -->
     <article v-else-if="article" class="max-w-3xl mx-auto">
       <NuxtLink to="/articles" class="inline-block text-xs uppercase tracking-widest font-bold text-neutral-400 hover:text-black mb-8 transition">
         &larr; Kembali
@@ -24,12 +26,14 @@
         <img :src="article.thumbnailUrl" :alt="article.title" class="w-full h-full object-cover" />
       </div>
 
+      <!-- Konten Artikel (HTML) -->
       <div 
         class="prose prose-neutral max-w-none text-neutral-800 leading-relaxed space-y-4 font-normal text-base sm:text-lg image-fix dynamic-html-content"
         v-html="article.content_html"
       ></div>
     </article>
 
+    <!-- State: Artikel Tidak Ditemukan -->
     <div v-else class="text-center py-20">
       <h2 class="text-lg font-bold text-neutral-900">Artikel Tidak Ditemukan</h2>
       <p class="text-neutral-400 text-sm mt-1">Gagal mengambil data artikel dari server backend.</p>
@@ -49,24 +53,33 @@ definePageMeta({
 })
 
 const route = useRoute()
-const articleId = route.params.id
+// PERBAIKAN 1: Gunakan .slug karena nama file adalah [slug].vue
+const articleSlug = route.params.slug
 
-// Menggunakan global fetch bawaan Nuxt untuk memotong bypass auth header token
-const { data: article, status } = await useAsyncData(`direct-detail-${articleId}`, async () => {
+const { data: article, status } = await useAsyncData(`article-detail-${articleSlug}`, async () => {
   try {
-    const response = await $fetch<any>(`http://localhost:8000/api/articles/${articleId}`)
+    // PERBAIKAN 2: Tambahkan /public/ pada URL API agar bisa diakses tanpa login
+    const response = await $fetch<any>(`http://localhost:8000/api/public/articles/${articleSlug}`)
+    
+    // Sesuaikan dengan struktur data dari Laravel (biasanya dibungkus dalam properti 'data')
     const data = response?.data ? response.data : response
     
     if (!data) return null
 
     const baseUrlLaravel = 'http://localhost:8000'
+    
+    // Logika pengolahan path gambar thumbnail
     const rawPath = data.thumbnail?.path || ''
     const originalPath = rawPath.startsWith('public/') ? rawPath.replace('public/', 'storage/') : rawPath
-    const fullImageUrl = originalPath.startsWith('http') ? originalPath : `${baseUrlLaravel}${originalPath.startsWith('/') ? originalPath : '/' + originalPath}`
+    const fullImageUrl = originalPath.startsWith('http') 
+      ? originalPath 
+      : `${baseUrlLaravel}${originalPath.startsWith('/') ? originalPath : '/' + originalPath}`
 
+    // Logika pengolahan isi konten (HTML)
     let rawContentHtml = data.description || data.content || ''
 
     if (rawContentHtml && typeof rawContentHtml === 'string') {
+      // Fix link gambar di dalam konten agar mengarah ke backend yang benar
       rawContentHtml = rawContentHtml.replace(/src="\/storage\//g, `src="${baseUrlLaravel}/storage/`)
       rawContentHtml = rawContentHtml.replace(/src="\/api\/attachments\//g, `src="${baseUrlLaravel}/api/attachments/`)
     }
@@ -79,7 +92,7 @@ const { data: article, status } = await useAsyncData(`direct-detail-${articleId}
       thumbnailUrl: originalPath ? fullImageUrl : null
     }
   } catch (err) {
-    console.error('Gagal mengambil detail artikel via direct fetch:', err)
+    console.error('Gagal mengambil detail artikel:', err)
     return null
   }
 })

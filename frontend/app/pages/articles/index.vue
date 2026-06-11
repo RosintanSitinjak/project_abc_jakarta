@@ -52,7 +52,7 @@
 
             <div class="mt-6 pt-4 border-t border-neutral-100 flex items-center justify-between">
               <NuxtLink 
-                :to="`/articles/${item.id}`"
+                :to="`/articles/${item.slug}`"
                 class="text-xs uppercase tracking-widest font-bold text-neutral-900 hover:text-neutral-500 transition duration-300 flex items-center gap-2"
               >
                 Baca Selengkapnya →

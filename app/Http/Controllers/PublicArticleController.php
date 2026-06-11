@@ -47,8 +47,21 @@ class PublicArticleController extends Controller
      */
     public function show($slug)
     {
-        $article = Article::with('thumbnail')->where('slug', $slug)->firstOrFail();
-        $article->increment('views');
-        return response()->json($article);
-    }
+        // $article = Article::with('thumbnail')->where('slug', $slug)->firstOrFail();
+        // $article->increment('views');
+        // return response()->json($article);
+
+        $article = \App\Models\Article::with(['author', 'thumbnail'])
+                ->where('slug', $slug)
+                ->first();
+
+        if (!$article) {
+            return response()->json(['message' => 'Artikel tidak ditemukan'], 404);
+        }
+
+        return response()->json([
+            'data' => $article
+        ]);
 }
+
+}   
