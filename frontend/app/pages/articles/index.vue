@@ -1,12 +1,40 @@
 <template>
-  <div class="min-h-screen bg-slate-50 py-16 px-4 sm:px-6 md:px-10 lg:px-20">
+
+
+  <div class="min-h-screen bg-white text-[#1e293b]">
+    <!-- 1. HEADER BANNER: Articles & Insights -->
+    <section class="py-16 lg:py-20 bg-[#1e293b] text-white text-center relative overflow-hidden">
+      <!-- Ornamen Dekorasi -->
+      <div class="absolute top-0 right-0 w-64 h-64 bg-[#3b5d95] blur-[100px] opacity-20 -translate-y-1/2 translate-x-1/2"></div>
+      
+      <div class="container mx-auto px-6 relative z-10">
+        <!-- Badge Atas -->
+        <span class="inline-block px-4 py-1.5 rounded-full bg-white/10 text-white text-[10px] font-black uppercase tracking-[0.2em] mb-4 border border-white/5">
+          Knowledge & Updates
+        </span>
+
+        <!-- Judul -->
+        <h1 class="text-3xl md:text-5xl font-extrabold mb-5 tracking-tight leading-tight max-w-4xl mx-auto">
+          Articles & <span class="text-[#8b8e92] italic">Latest</span> Insights <br class="hidden md:block" />
+          <span class="text-xl md:text-2xl font-light opacity-80 uppercase tracking-[0.2em]">Expanding Knowledge in Digital Era</span>
+        </h1>
+
+        <!-- Deskripsi -->
+        <p class="text-gray-200 max-w-2xl mx-auto text-base md:text-lg leading-relaxed font-medium">
+          Explore our collection of industry trends, technical guides, and business strategies curated by our expert consultants.
+        </p>
+      </div>
+    </section>
+
+
+  <!-- <div class="min-h-screen bg-slate-50 py-16 px-4 sm:px-6 md:px-10 lg:px-20"> -->
     <div class="max-w-6xl mx-auto">
       
-      <div class="mb-14 text-center md:text-left">
+      <!-- <div class="mb-14 text-center md:text-left">
         <p class="text-xs font-semibold uppercase tracking-[0.35em] text-neutral-400 mb-2">Our Insights & Updates</p>
         <h1 class="text-4xl font-extrabold text-neutral-900 tracking-tight md:text-5xl">New Article</h1>
         <div class="mt-6 h-[2px] w-16 bg-black mx-auto md:mx-0"></div>
-      </div>
+      </div> -->
 
       <div v-if="status === 'pending'" class="flex flex-col justify-center items-center py-24 space-y-3">
         <el-icon class="is-loading text-3xl text-neutral-900"><Loading /></el-icon>
@@ -55,7 +83,7 @@
                 :to="`/articles/${item.slug}`"
                 class="text-xs uppercase tracking-widest font-bold text-neutral-900 hover:text-neutral-500 transition duration-300 flex items-center gap-2"
               >
-                Baca Selengkapnya →
+                Read More →
               </NuxtLink>
             </div>
           </div>

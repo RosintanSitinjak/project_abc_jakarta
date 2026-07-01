@@ -85,10 +85,25 @@ class ServiceController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(Service $service): JsonResponse
-    {
-        $service->delete();
+//     public function destroy(Service $service): JsonResponse
+//     {
+//         $service->delete();
 
-        return response()->json(['status' => 'deleted']);
+//         return response()->json(['status' => 'deleted']);
+//     }
+// }
+
+public function destroy(Service $service)
+{
+    try {
+        $service->delete();
+        
+        // PENTING: Refresh cache agar data di landing page juga terhapus
+        \App\Support\PublicCatalogCache::refreshServices();
+
+        return response()->json(['message' => 'Service deleted successfully']);
+    } catch (\Exception $e) {
+        return response()->json(['message' => 'Gagal menghapus: ' . $e->getMessage()], 500);
     }
+}
 }

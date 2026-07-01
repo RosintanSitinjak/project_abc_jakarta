@@ -1,5 +1,28 @@
 <template>
-  <div class="bg-slate-50 px-6 py-14">
+<div class="min-h-screen bg-white text-[#1e293b]">
+    <!-- 1. HEADER BANNER: Get In Touch -->
+    <section class="py-16 lg:py-20 bg-[#1e293b] text-white text-center relative overflow-hidden">
+      <!-- Ornamen Dekorasi -->
+      <div class="absolute top-0 right-0 w-64 h-64 bg-[#3b5d95] blur-[100px] opacity-20 -translate-y-1/2 translate-x-1/2"></div>
+      
+      <div class="container mx-auto px-6 relative z-10">
+        <!-- Badge Atas -->
+        <span class="inline-block px-4 py-1.5 rounded-full bg-white/10 text-white text-[10px] font-black uppercase tracking-[0.2em] mb-4 border border-white/5">
+          Get In Touch
+        </span>
+
+        <!-- Judul -->
+        <h1 class="text-3xl md:text-5xl font-extrabold mb-5 tracking-tight leading-tight max-w-4xl mx-auto">
+          Contact <span class="text-[#8b8e92] italic">Our</span> Expert Team <br class="hidden md:block" />
+          <span class="text-xl md:text-2xl font-light opacity-80 uppercase tracking-[0.2em]">Let's Build Something Great Together</span>
+        </h1>
+
+        <!-- Deskripsi -->
+        <p class="text-gray-200 max-w-2xl mx-auto text-base md:text-lg leading-relaxed font-medium">
+          Have a project in mind or need technical consultation? Reach out to us and let's discuss how we can help your business thrive.
+        </p>
+      </div>
+    </section>
 
     <div class="w-full max-w-4xl mx-auto rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
 

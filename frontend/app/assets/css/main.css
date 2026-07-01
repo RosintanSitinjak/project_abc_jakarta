@@ -1,35 +1,12 @@
-/* @import url('https://fonts.googleapis.com/css2?family=Poppins:ital,wght=0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');
-
+/* @import url('https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');
 @import "tailwindcss";
 
 @theme {
-  --font-sans: 'Poppins', sans-serif;
+  --color-body: #64748b;
+  --color-primary: #2f57ef;
+  --color-primary-dark: #2443bc;
 }
 
-/* --- KUSTOM UTILITY UNTUK TAILWIND V4 --- */
-
-/* @utility glass-panel {
-  background-color: #ffffff;
-  border: 1px solid rgba(241, 245, 249, 0.8);
-  border-radius: 1.5rem;
-  box-shadow: 0 4px 20px rgba(15, 23, 42, 0.02);
-  padding: 1.75rem;
-}  */
-
-
-/* @import url('https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');
-
-
-@import "tailwindcss";
-
-
-@theme{
-    --font-sans: 'Poppins', sans-serif;
-} */
-
-
-@import url('https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');
-@import "tailwindcss";
 
 :root {
   --blue-900: #1e3a8a;
@@ -52,14 +29,15 @@
 @layer base {
   html {
     color-scheme: light;
-    overflow-x: hidden;
+    overflow-x: clip;
   }
   body {
     font-family: 'Poppins', system-ui, -apple-system, sans-serif;
     background-color: var(--slate-50);
     color: var(--slate-900);
-    overflow-x: hidden;
+    overflow-x: clip;
     width: 100%;
+    min-height: 100vh;
   }
 }
 
@@ -98,4 +76,103 @@ button,
   display: inline-flex;
   align-items: center;
   max-width: 100%;
+} */
+
+
+
+@import url('https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');
+@import "tailwindcss";
+
+/* 1. TAILWIND THEME CUSTOMIZATION (V4) */
+@theme {
+  --color-primary: #3b5d95;        /* Signature Blue Intan-S */
+  --color-primary-dark: #1e293b;   /* Corporate Navy */
+  --color-heading: #0f172a;
+  --color-body: #64748b;
+  --color-accent: #fde047;         /* Kuning Stabilo */
+}
+
+/* 2. ROOT VARIABLES FOR ELEMENT PLUS & CUSTOM COMPONENTS */
+:root {
+  /* Diubah ke Navy & Blue Intan-S */
+  --blue-900: #1e293b; 
+  --blue-800: #2a477d;
+  --blue-700: #3b5d95; 
+  --blue-100: #f1f5f9;
+  --blue-50:  #f8fafc;
+  
+  --slate-950: #0f172a;
+  --slate-900: #1e293b; /* Diganti Navy */
+  --slate-700: #334155;
+  --slate-500: #64748b;
+  --slate-400: #94a3b8;
+  --slate-200: #e2e8f0;
+  --slate-100: #f1f5f9;
+  --slate-50:  #f8fafc;
+}
+
+@layer base {
+  html {
+    color-scheme: light;
+    overflow-x: clip;
+    scroll-behavior: smooth;
+  }
+  body {
+    font-family: 'Poppins', system-ui, -apple-system, sans-serif;
+    background-color: #f8fafc; /* Abu-abu sangat muda agar box putih terlihat 'pop up' */
+    color: var(--slate-900);
+    overflow-x: clip;
+    width: 100%;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+}
+
+/* 3. CUSTOM UTILITIES FOR CORPORATE LOOK */
+@layer components {
+  .glass-panel {
+    /* Bayangan diperhalus dan border radius diperbesar agar mewah */
+    @apply rounded-[2rem] border border-white bg-white/80 shadow-[0_8px_30px_rgb(0,0,0,0.04)] backdrop-blur-md overflow-hidden;
+  }
+  .section-title {
+    /* Teks judul lebih tebal & navy */
+    @apply text-xl font-bold text-[var(--blue-900)] tracking-tight;
+  }
+  .stat-card {
+    /* Card statistik lebih tumpul sudutnya */
+    @apply rounded-[1.5rem] border border-slate-100 bg-white px-6 py-6 shadow-sm hover:shadow-md transition-all duration-300;
+  }
+}
+
+/* 4. ELEMENT PLUS OVERRIDES (Sync with Brand Colors) */
+.el-button--primary {
+  --el-color-primary: #3b5d95 !important;
+  --el-color-primary-light-3: #5a7bb5 !important;
+  --el-color-primary-light-5: #eef2f8 !important;
+  --el-color-primary-dark-2: #1e293b !important;
+  font-weight: 600 !important;
+  border-radius: 12px !important;
+}
+
+/* Sidebar Menu Active State */
+.el-menu-item.is-active {
+  background-color: rgba(59, 93, 149, 0.1) !important; /* Biru transparan */
+  color: #3b5d95 !important;
+  font-weight: 700 !important;
+  border-right: 4px solid #3b5d95;
+}
+
+/* 5. MODERN SCROLLBAR */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
 }

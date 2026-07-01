@@ -7,20 +7,39 @@
           <p class="text-sm text-[var(--slate-500)]">Define service offerings and scopes.</p>
         </div>
         <div class="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+          <!-- TOMBOL BARU: Hapus Data Sampah -->
+          <el-button 
+            v-if="services.length > 5"
+            type="danger" 
+            plain 
+            @click="bulkDeleteSpam"
+          >
+            Hapus Data Sampah
+          </el-button>
+
           <el-input v-model="searchQuery" placeholder="Search services..." clearable class="w-full sm:w-64">
             <template #prefix>
-              <Icon icon="solar:magnifer-linear" />
+              <Icon icon="tabler:search" />
             </template>
           </el-input>
+
           <el-button type="primary" @click="openCreate">Add Service</el-button>
         </div>
       </div>
 
       <div class="mt-6 overflow-x-auto -mx-4 sm:-mx-6 px-4 sm:px-6">
-        <el-table :data="paginatedServices" row-key="id" stripe v-loading="loading" class="min-w-[700px] w-full" @sort-change="handleSort" :default-sort="{ prop: 'name', order: 'ascending' }">
+        <el-table 
+          v-loading="loading" 
+          :data="paginatedServices" 
+          row-key="id" 
+          stripe 
+          class="min-w-[700px] w-full" 
+          @sort-change="handleSort" 
+          :default-sort="{ prop: 'name', order: 'ascending' }"
+        >
           <el-table-column prop="name" sortable="custom" label="Service Name" min-width="200" show-overflow-tooltip />
-          <el-table-column prop="slug" sortable="custom" label="Slug" min-width="180" show-overflow-tooltip />
           <el-table-column prop="description" sortable="custom" label="Description" min-width="260" show-overflow-tooltip />
+          
           <el-table-column label="Scopes" min-width="220">
             <template #default="{ row }">
               <div class="flex flex-wrap gap-2">
@@ -31,6 +50,7 @@
               </div>
             </template>
           </el-table-column>
+
           <el-table-column label="Thumbnail" min-width="160">
             <template #default="{ row }">
               <span class="text-sm text-[var(--slate-600)]">
@@ -38,21 +58,25 @@
               </span>
             </template>
           </el-table-column>
-          <el-table-column label="Actions" width="170" align="center">
+
+          <!-- KOLOM AKSI: Diperbaiki agar tombol lebih terlihat dan rapi -->
+          <el-table-column label="Actions" width="180" align="center">
             <template #default="{ row }">
-              <el-button text type="primary" aria-label="Edit" @click="openEdit(row)">
-                <Icon icon="solar:pen-2-outline" class="text-lg" />
-              </el-button>
-              <el-button text type="danger" aria-label="Delete" @click="confirmDelete(row)">
-                <Icon icon="solar:trash-bin-trash-outline" class="text-lg" />
-              </el-button>
+              <div class="flex justify-center gap-2">
+                <el-button size="small" type="primary" plain @click="openEdit(row)">
+                  <Icon icon="solar:pen-2-outline" class="mr-1" /> Edit
+                </el-button>
+                <el-button size="small" type="danger" plain @click="confirmDelete(row)">
+                  <Icon icon="solar:trash-bin-trash-outline" class="mr-1" /> Hapus
+                </el-button>
+              </div>
             </template>
           </el-table-column>
         </el-table>
       </div>
 
       <div class="mt-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-sm text-[var(--slate-500)]">
-        <span>Showing {{ showingFrom }}–{{ showingTo }} of {{ services.length }}</span>
+        <span>Showing {{ showingFrom }}–{{ showingTo }} of {{ services.length }} data</span>
         <el-pagination
           v-model:current-page="currentPage"
           v-model:page-size="pageSize"
@@ -65,6 +89,7 @@
       </div>
     </section>
 
+    <!-- Dialog Form -->
     <el-dialog
       v-model="isDialogOpen"
       :title="dialogTitle"
@@ -77,11 +102,11 @@
       <div class="max-h-[70vh] overflow-y-auto pr-2">
         <el-form ref="formRef" :model="form" :rules="rules" label-position="top">
           <el-form-item label="Service Name" prop="name">
-            <el-input v-model="form.name" placeholder="IT Development" />
+            <el-input v-model="form.name" placeholder="Contoh: IT Development" />
           </el-form-item>
 
           <el-form-item label="Description">
-            <el-input v-model="form.description" type="textarea" :rows="3" />
+            <el-input v-model="form.description" type="textarea" :rows="3" placeholder="Jelaskan detail layanan..." />
           </el-form-item>
 
           <el-form-item label="Scopes">
@@ -93,7 +118,7 @@
               default-first-option
               collapse-tags
               :max-collapse-tags="3"
-              placeholder="Add scopes"
+              placeholder="Tambahkan scope (Tekan Enter)"
               class="w-full"
             >
               <el-option v-for="option in scopeOptions" :key="option" :label="option" :value="option" />
@@ -123,7 +148,7 @@
       <template #footer>
         <el-button @click="closeDialog">Cancel</el-button>
         <el-button type="primary" @click="submitForm">
-          {{ isEditing ? 'Update' : 'Create' }}
+          {{ isEditing ? 'Update Service' : 'Create Service' }}
         </el-button>
       </template>
     </el-dialog>
@@ -139,6 +164,7 @@ import AdminShell from '~/components/Admin/Shell.vue'
 import type { Service, ServiceScope } from '~/types/admin'
 import { useApi } from '~/composables/useApi'
 
+// --- Types ---
 type ServiceForm = {
   name: string
   description: string
@@ -146,18 +172,8 @@ type ServiceForm = {
   thumbnail: UploadUserFile | null
 }
 
-type ServiceScopeApi = {
-  id: string
-  service_id: string
-  scope: string
-}
-
-type AttachmentApi = {
-  id: string
-  name: string
-  path: string
-}
-
+type ServiceScopeApi = { id: string; service_id: string; scope: string }
+type AttachmentApi = { id: string; name: string; path: string }
 type ServiceApi = {
   id: string
   name: string
@@ -168,59 +184,45 @@ type ServiceApi = {
   thumbnail: AttachmentApi | null
 }
 
-const createDefaultForm = (): ServiceForm => ({
-  name: '',
-  description: '',
-  scopes: [],
-  thumbnail: null,
-})
-
-const scopeOptions = [
-  'Concept',
-  '3D Modeling',
-  'Construction',
-  'Material Selection',
-  'Installation',
-  'Maintenance',
-]
-
+// --- State & Constants ---
 const route = useRoute()
 const { apiFetch, unwrap, getErrorMessage, uploadAttachment } = useApi()
 
+const scopeOptions = ['Concept', '3D Modeling', 'Construction', 'Material Selection', 'Installation', 'Maintenance']
 const services = ref<Service[]>([])
 const loading = ref(false)
 const currentPage = ref(1)
 const pageSize = ref(10)
 const searchQuery = ref('')
 const searchTimeout = ref<ReturnType<typeof setTimeout> | null>(null)
-
-const paginatedServices = computed(() => {
-  const start = (currentPage.value - 1) * pageSize.value
-  return services.value.slice(start, start + pageSize.value)
-})
-
-const showingFrom = computed(() => services.value.length === 0 ? 0 : (currentPage.value - 1) * pageSize.value + 1)
-const showingTo = computed(() => Math.min(currentPage.value * pageSize.value, services.value.length))
-
 const sortProp = ref<string>('name')
 const sortOrder = ref<string>('ascending')
-
-const handleSort = ({ prop, order }: { prop: string | null, order: string | null }) => {
-  sortProp.value = prop || 'name'
-  sortOrder.value = order || 'ascending'
-  loadServices()
-}
 
 const isDialogOpen = ref(false)
 const isEditing = ref(false)
 const editingId = ref<string | null>(null)
 const editingScopes = ref<ServiceScope[]>([])
 const formRef = ref<FormInstance>()
-const form = reactive<ServiceForm>(createDefaultForm())
 const thumbnailFiles = ref<UploadUserFile[]>([])
 
+const createDefaultForm = (): ServiceForm => ({
+  name: '',
+  description: '',
+  scopes: [],
+  thumbnail: null,
+})
+const form = reactive<ServiceForm>(createDefaultForm())
+
+// --- Computed ---
+const paginatedServices = computed(() => {
+  const start = (currentPage.value - 1) * pageSize.value
+  return services.value.slice(start, start + pageSize.value)
+})
+const showingFrom = computed(() => (services.value.length === 0 ? 0 : (currentPage.value - 1) * pageSize.value + 1))
+const showingTo = computed(() => Math.min(currentPage.value * pageSize.value, services.value.length))
 const dialogTitle = computed(() => (isEditing.value ? 'Edit Service' : 'Add Service'))
 
+// --- Validation ---
 const rules: FormRules<ServiceForm> = {
   name: [{ required: true, message: 'Service name is required', trigger: 'blur' }],
   thumbnail: [
@@ -230,11 +232,12 @@ const rules: FormRules<ServiceForm> = {
         if (!value) callback(new Error('Thumbnail harus diisi!'))
         else callback()
       },
-      trigger: ['change', 'blur'],
+      trigger: 'change',
     },
   ],
 }
 
+// --- Helper Mappers ---
 const mapAttachment = (attachment: AttachmentApi | null): UploadUserFile | null => {
   if (!attachment) return null
   return {
@@ -259,55 +262,67 @@ const mapService = (service: ServiceApi): Service => ({
   thumbnail: mapAttachment(service.thumbnail),
 })
 
-const resetForm = () => {
-  Object.assign(form, createDefaultForm())
-  thumbnailFiles.value = []
-  editingScopes.value = []
-  formRef.value?.clearValidate()
-}
-
-const closeDialog = () => {
-  isDialogOpen.value = false
-}
-
-const openCreate = () => {
-  isEditing.value = false
-  editingId.value = null
-  resetForm()
-  isDialogOpen.value = true
-}
-
-const openEdit = (service: Service) => {
-  isEditing.value = true
-  editingId.value = service.id
-  editingScopes.value = [...(service.scopes ?? [])]
-  Object.assign(form, {
-    name: service.name,
-    description: service.description ?? '',
-    scopes: service.scopes.map((scope) => scope.scope),
-    thumbnail: service.thumbnail ?? null,
-  })
-  thumbnailFiles.value = service.thumbnail ? [service.thumbnail] : []
-  isDialogOpen.value = true
-  nextTick(() => formRef.value?.clearValidate())
-}
-
-const openEditById = async (id: string) => {
-  try {
-    const service = await apiFetch<ServiceApi>(`/services/${id}`)
-    openEdit(mapService(service))
-  } catch (error) {
-    ElMessage.error(getErrorMessage(error, 'Failed to load service.'))
-  }
-}
-
-const isUuid = (value: string) =>
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)
-
+const isUuid = (value: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)
 const resolveAttachmentId = (file: any | null) => {
   if (!file) return null
   const uidStr = String(file.attachmentId || file.uid || '')
   return isUuid(uidStr) ? uidStr : null
+}
+
+// --- Methods ---
+const loadServices = async () => {
+  loading.value = true
+  try {
+    const query = new URLSearchParams()
+    if (searchQuery.value) query.append('search', searchQuery.value)
+    if (sortProp.value) {
+      query.append('sort_by', sortProp.value)
+      query.append('sort_order', sortOrder.value === 'descending' ? 'desc' : 'asc')
+    }
+    const response = await apiFetch<ServiceApi[] | { data: ServiceApi[] }>(`/services?${query.toString()}`)
+    services.value = unwrap(response).map(mapService)
+  } catch (error) {
+    ElMessage.error(getErrorMessage(error, 'Failed to load services.'))
+  } finally {
+    loading.value = false
+  }
+}
+
+const handleSort = ({ prop, order }: { prop: string | null; order: string | null }) => {
+  sortProp.value = prop || 'name'
+  sortOrder.value = order || 'ascending'
+  loadServices()
+}
+
+const bulkDeleteSpam = async () => {
+  const spam = services.value.filter(s => 
+    s.name.toUpperCase().includes('TEST') || 
+    s.name.toLowerCase().includes('web service')
+  )
+  
+  if (spam.length === 0) {
+    ElMessage.info('Tidak ada data sampah (TEST/Web Service) yang ditemukan.')
+    return
+  }
+
+  try {
+    await ElMessageBox.confirm(
+      `Hapus ${spam.length} data sampah yang mengandung nama "TEST" atau "Web Service"?`,
+      'Pembersihan Massal',
+      { type: 'warning', confirmButtonText: 'Ya, Hapus Semua' }
+    )
+    
+    loading.value = true
+    for (const item of spam) {
+      await apiFetch(`/services/${item.id}`, { method: 'DELETE' })
+    }
+    ElMessage.success(`${spam.length} data sampah berhasil dihapus!`)
+    loadServices()
+  } catch (err) {
+    if (err !== 'cancel') ElMessage.error('Gagal melakukan hapus masal')
+  } finally {
+    loading.value = false
+  }
 }
 
 const handleThumbnailChange = async (file: UploadFile) => {
@@ -318,7 +333,7 @@ const handleThumbnailChange = async (file: UploadFile) => {
       type: 'thumbnail',
     })
     const uploaded: any = {
-      uid: attachment.id as any,
+      uid: attachment.id,
       attachmentId: attachment.id,
       name: attachment.name,
       url: attachment.path,
@@ -338,160 +353,103 @@ const handleThumbnailRemove = () => {
   form.thumbnail = null
 }
 
-const buildPayload = () => ({
-  name: form.name,
-  description: form.description || null,
-  thumbnail_id: resolveAttachmentId(form.thumbnail),
-})
-
-const normalizeScopes = (values: string[]) =>
-  Array.from(new Set(values.map((value) => value.trim()).filter(Boolean)))
-
 const syncScopes = async (serviceId: string, nextScopes: string[], currentScopes: ServiceScope[]) => {
-  const normalized = normalizeScopes(nextScopes)
-  const current = currentScopes ?? []
-  const currentNames = new Set(current.map((scope) => scope.scope))
+  const normalized = Array.from(new Set(nextScopes.map(s => s.trim()).filter(Boolean)))
+  const currentNames = new Set(currentScopes.map(s => s.scope))
 
-  const toCreate = normalized.filter((scope) => !currentNames.has(scope))
-  const toDelete = current.filter((scope) => !normalized.includes(scope.scope))
+  const toCreate = normalized.filter(s => !currentNames.has(s))
+  const toDelete = currentScopes.filter(s => !normalized.includes(s.scope))
 
-  await Promise.all(
-    toDelete.map((scope) =>
-      apiFetch(`/service-scopes/${scope.id}`, {
-        method: 'DELETE',
-      }),
-    ),
-  )
-
-  await Promise.all(
-    toCreate.map((scope) =>
-      apiFetch('/service-scopes', {
-        method: 'POST',
-        body: { service_id: serviceId, scope },
-      }),
-    ),
-  )
+  await Promise.all([
+    ...toDelete.map(s => apiFetch(`/service-scopes/${s.id}`, { method: 'DELETE' })),
+    ...toCreate.map(s => apiFetch('/service-scopes', { method: 'POST', body: { service_id: serviceId, scope: s } }))
+  ])
 }
-
-const loadServices = async () => {
-  loading.value = true
-  try {
-    const query = new URLSearchParams()
-    if (searchQuery.value) {
-      query.append('search', searchQuery.value)
-    }
-    if (sortProp.value) {
-      query.append('sort_by', sortProp.value)
-      query.append('sort_order', sortOrder.value === 'descending' ? 'desc' : 'asc')
-    }
-    const response = await apiFetch<ServiceApi[] | { data: ServiceApi[] }>(`/services?${query.toString()}`)
-    services.value = unwrap(response).map(mapService)
-    currentPage.value = 1
-  } catch (error) {
-    ElMessage.error(getErrorMessage(error, 'Failed to load services.'))
-  } finally {
-    loading.value = false
-  }
-}
-
-watch(searchQuery, () => {
-  if (searchTimeout.value) clearTimeout(searchTimeout.value)
-  searchTimeout.value = setTimeout(() => {
-    loadServices()
-  }, 300)
-})
 
 const submitForm = async () => {
-  const formEl = formRef.value
-  if (!formEl) return
+  if (!formRef.value) return
+  await formRef.value.validate(async (valid) => {
+    if (!valid) {
+      ElNotification({ title: 'Error', message: 'Cek kembali form dan thumbnail!', type: 'error' })
+      return
+    }
 
-  await formEl.validate(async (valid) => {
-    if (valid) {
-      if (form.thumbnail && !resolveAttachmentId(form.thumbnail)) {
-        ElMessage.warning('Upload thumbnail belum terhubung, simpan tanpa thumbnail.')
+    try {
+      loading.value = true
+      const payload = {
+        name: form.name,
+        description: form.description || null,
+        thumbnail_id: resolveAttachmentId(form.thumbnail),
       }
 
-      try {
-        const payload = buildPayload()
-        const scopeValues = normalizeScopes(form.scopes)
-
-        if (isEditing.value && editingId.value) {
-          const updated = await apiFetch<ServiceApi>(`/services/${editingId.value}`, {
-            method: 'PUT',
-            body: payload,
-          })
-          await syncScopes(updated.id, scopeValues, editingScopes.value)
-          const refreshed = await apiFetch<ServiceApi>(`/services/${updated.id}`)
-          const mapped = mapService(refreshed)
-          const index = services.value.findIndex((item) => item.id === updated.id)
-          if (index !== -1) {
-            services.value[index] = mapped
-          } else {
-            services.value.unshift(mapped)
-          }
-          ElMessage.success('Service updated')
-        } else {
-          const created = await apiFetch<ServiceApi>('/services', {
-            method: 'POST',
-            body: payload,
-          })
-          await syncScopes(created.id, scopeValues, [])
-          const refreshed = await apiFetch<ServiceApi>(`/services/${created.id}`)
-          services.value.unshift(mapService(refreshed))
-          ElMessage.success('Service created')
-        }
-        closeDialog()
-      } catch (error) {
-        ElMessage.error(getErrorMessage(error, 'Failed to save service.'))
+      let serviceId = editingId.value
+      if (isEditing.value && serviceId) {
+        await apiFetch(`/services/${serviceId}`, { method: 'PUT', body: payload })
+        await syncScopes(serviceId, form.scopes, editingScopes.value)
+        ElMessage.success('Service updated')
+      } else {
+        const created = await apiFetch<ServiceApi>('/services', { method: 'POST', body: payload })
+        serviceId = created.id
+        await syncScopes(serviceId, form.scopes, [])
+        ElMessage.success('Service created')
       }
-    } else {
-      ElNotification({
-        title: 'Error',
-        message: 'Harap lengkapi form dengan benar, termasuk Thumbnail!',
-        type: 'error',
-      })
+      
+      closeDialog()
+      loadServices()
+    } catch (error) {
+      ElMessage.error(getErrorMessage(error, 'Failed to save service.'))
+    } finally {
+      loading.value = false
     }
   })
 }
 
+const openCreate = () => {
+  isEditing.value = false
+  editingId.value = null
+  resetForm()
+  isDialogOpen.value = true
+}
+
+const openEdit = (service: Service) => {
+  isEditing.value = true
+  editingId.value = service.id
+  editingScopes.value = [...(service.scopes ?? [])]
+  Object.assign(form, {
+    name: service.name,
+    description: service.description,
+    scopes: service.scopes.map(s => s.scope),
+    thumbnail: service.thumbnail,
+  })
+  thumbnailFiles.value = service.thumbnail ? [service.thumbnail] : []
+  isDialogOpen.value = true
+}
+
 const confirmDelete = async (service: Service) => {
   try {
-    await ElMessageBox.confirm(
-      `Delete ${service.name}?`,
-      'Delete Service',
-      {
-        confirmButtonText: 'Delete',
-        cancelButtonText: 'Cancel',
-        type: 'warning',
-      },
-    )
-  } catch {
-    return
-  }
-
-  try {
+    await ElMessageBox.confirm(`Hapus layanan "${service.name}"?`, 'Konfirmasi Hapus', {
+      type: 'warning',
+      confirmButtonClass: 'el-button--danger'
+    })
     await apiFetch(`/services/${service.id}`, { method: 'DELETE' })
-    services.value = services.value.filter((item) => item.id !== service.id)
     ElMessage.success('Service deleted')
-  } catch (error) {
-    ElMessage.error(getErrorMessage(error, 'Failed to delete service.'))
-  }
+    loadServices()
+  } catch (err) { /* cancel */ }
 }
 
-const handleInitialDialog = async () => {
-  if ('create' in route.query) {
-    openCreate()
-    return
-  }
-
-  const editId = route.query.edit
-  if (typeof editId === 'string' && editId) {
-    await openEditById(editId)
-  }
+const resetForm = () => {
+  Object.assign(form, createDefaultForm())
+  thumbnailFiles.value = []
+  editingScopes.value = []
+  formRef.value?.clearValidate()
 }
 
-onMounted(() => {
-  loadServices()
-  handleInitialDialog()
+const closeDialog = () => { isDialogOpen.value = false }
+
+watch(searchQuery, () => {
+  if (searchTimeout.value) clearTimeout(searchTimeout.value)
+  searchTimeout.value = setTimeout(loadServices, 400)
 })
+
+onMounted(loadServices)
 </script>
