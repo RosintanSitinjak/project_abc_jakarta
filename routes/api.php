@@ -60,13 +60,13 @@ Route::post('/auth/logout', [AuthController::class, 'logout'])->middleware(['aut
 
 Route::apiResource('attachments', AttachmentController::class);
 Route::apiResource('site-settings', SiteSettingController::class);
-Route::apiResource('services', ServiceController::class);
+Route::apiResource('categories', CategoryController::class);
 Route::apiResource('service-scopes', ServiceScopeOfServiceController::class)
     ->parameters(['service-scopes' => 'service_scope_of_service']);
 Route::apiResource('categories', CategoryController::class);
-Route::apiResource('products', ProductController::class);
+Route::apiResource('books', BookController::class);
 Route::apiResource('portfolios', PortfolioController::class);
-Route::apiResource('clients', ClientController::class);
+Route::apiResource('customers', CustomerController::class);
 
 Route::apiResource('user-management', \App\Http\Controllers\UserManagementController::class)
     ->middleware(['auth:sanctum', 'role:1,2']);

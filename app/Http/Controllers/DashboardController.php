@@ -2,53 +2,33 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Client;
-use App\Models\Portfolio;
-use App\Models\Product;
-use App\Models\Service;
+use App\Models\Category;
+use App\Models\Customer;
+use App\Models\Book;
+use App\Models\Order;
 use App\Models\Visitor;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
 {
     public function index(): JsonResponse
     {
-        $stats = [
-            'services' => Service::count(),
-            'clients' => Client::count(),
-            'products' => Product::count(),
-            'portfolios' => Portfolio::count(),
-            'visitors' => Visitor::count(),
-        ];
-
-        // Monthly visitors for the current year
-        $year = Carbon::now()->year;
-
-        $visitors = Visitor::whereYear('created_at', $year)
-            ->get(['created_at']);
-
-        $monthlyCounts = array_fill(1, 12, 0);
-
-        foreach ($visitors as $visitor) {
-            $monthlyCounts[$visitor->created_at->month]++;
-        }
-
-        // Build array for all 12 months
-        $monthlyVisitors = [];
-        for ($m = 1; $m <= 12; $m++) {
-            $monthlyVisitors[] = [
-                'month' => $m,
-                'label' => Carbon::create()->month($m)->format('M'),
-                'total' => $monthlyCounts[$m],
-            ];
-        }
-
-        return response()->json([
-            'stats' => $stats,
-            'monthly_visitors' => $monthlyVisitors,
-            'year' => $year,
-        ]);
+       return response()->json([
+        'stats' => [
+            'services'  => \App\Models\Category::count(),
+            'clients'   => \App\Models\Customer::count(),
+            'products'  => \App\Models\Book::count(),
+            'portfolios'=> \App\Models\Order::where('payment_status', 'pending')->count(), // Pesanan Baru
+            'visitors'  => \App\Models\Book::whereRaw('stock <= rop_point')->count(), // Stok Kritis
+        ],
+        // Untuk grafik, sementara biarkan data dummy atau sesuaikan jika sudah ada tabel transaksi
+        'monthly_visitors' => [
+            ['label' => 'Jan', 'total' => 0],
+            ['label' => 'Feb', 'total' => 0],
+            // ... dst
+        ],
+        'year' => date('Year'),
+    ]);
     }
 }

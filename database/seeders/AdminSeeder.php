@@ -27,10 +27,16 @@ class AdminSeeder extends Seeder
         ],
 
             [
-            'name' => 'Intan Dev', 
+            'name' => 'Intan Developer', 
             'email' => '2381014@unai.edu', // Akun pribadi untuk tes
             'role' => \App\Enums\Role::Admin
         ],
+
+        // [
+        //     'name' => 'Karla Developer', 
+        //     'email' => '2381044@unai.edu', // Akun pribadi untuk tes
+        //     'role' => \App\Enums\Role::Admin
+        // ],
     ];
 
 
