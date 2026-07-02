@@ -2,59 +2,108 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\StoreCategoryRequest;
-use App\Http\Requests\UpdateCategoryRequest;
-use App\Models\Category;
+use App\Http\Controllers\Concerns\ManagesAttachments;
+use App\Http\Requests\StoreServiceRequest;
+use App\Http\Requests\UpdateServiceRequest;
+use App\Models\Service;
 use Illuminate\Http\JsonResponse;
 
 class CategoryController extends Controller
 {
+    use ManagesAttachments;
+
     /**
      * Display a listing of the resource.
      */
     public function index(\Illuminate\Http\Request $request): JsonResponse
     {
-        $query = Category::query()->latest();
-        $categories = $request->paginated ? $query->paginate($request->itemsPerPage) : $query->get();
+        $query = Service::query()
+            ->with(['scopes', 'thumbnail']);
 
-        return response()->json($categories);
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'ILIKE', "%{$search}%")
+                  ->orWhere('description', 'ILIKE', "%{$search}%");
+            });
+        }
+
+        if ($request->filled('sort_by')) {
+            $sortOrder = $request->input('sort_order', 'asc');
+            $query->orderBy($request->sort_by, $sortOrder);
+        } else {
+            $query->latest();
+        }
+
+        $services = $request->paginated ? $query->paginate($request->itemsPerPage) : $query->get();
+
+        return response()->json($services);
     }
 
     /**
      * Store a newly created resource in storage.
      */
-    public function store(StoreCategoryRequest $request): JsonResponse
+    public function store(StoreServiceRequest $request): JsonResponse
     {
-        $category = Category::create($request->validated());
+        $data = $request->validated();
+        $thumbnailId = $data['thumbnail_id'] ?? null;
+        unset($data['thumbnail_id']);
 
-        return response()->json($category, 201);
+        $service = Service::create($data);
+        $this->setSingleAttachment($service, 'thumbnail', $thumbnailId, 'thumbnail');
+
+        \App\Support\PublicCatalogCache::refreshServices();
+
+        return response()->json($service->load(['scopes', 'thumbnail']), 201);
     }
 
     /**
      * Display the specified resource.
      */
-    public function show(Category $category): JsonResponse
+    public function show(Service $service): JsonResponse
     {
-        return response()->json($category);
+        return response()->json($service->load(['scopes', 'thumbnail']));
     }
 
     /**
      * Update the specified resource in storage.
      */
-    public function update(UpdateCategoryRequest $request, Category $category): JsonResponse
+    public function update(UpdateServiceRequest $request, Service $service): JsonResponse
     {
-        $category->update($request->validated());
+        $data = $request->validated();
+        $thumbnailId = $data['thumbnail_id'] ?? null;
+        unset($data['thumbnail_id']);
 
-        return response()->json($category);
+        $service->update($data);
+        $this->setSingleAttachment($service, 'thumbnail', $thumbnailId, 'thumbnail');
+
+        \App\Support\PublicCatalogCache::refreshServices();
+
+        return response()->json($service->load(['scopes', 'thumbnail']));
     }
 
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(Category $category): JsonResponse
-    {
-        $category->delete();
+//     public function destroy(Service $service): JsonResponse
+//     {
+//         $service->delete();
 
-        return response()->json(['status' => 'deleted']);
+//         return response()->json(['status' => 'deleted']);
+//     }
+// }
+
+public function destroy(Service $service)
+{
+    try {
+        $service->delete();
+        
+        // PENTING: Refresh cache agar data di landing page juga terhapus
+        \App\Support\PublicCatalogCache::refreshServices();
+
+        return response()->json(['message' => 'Service deleted successfully']);
+    } catch (\Exception $e) {
+        return response()->json(['message' => 'Gagal menghapus: ' . $e->getMessage()], 500);
     }
+}
 }

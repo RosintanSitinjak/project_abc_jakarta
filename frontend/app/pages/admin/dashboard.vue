@@ -3,44 +3,40 @@
     <!-- Statistics Cards -->
     <section class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
       <div v-for="stat in statCards" :key="stat.key" class="stat-card group">
-        <!-- Stat Icon - Ukuran dikecilkan sedikit -->
-        <div class="stat-icon" :style="{ background: stat.gradient }">
+        <div class="stat-icon" :style="{ background: stat.color }">
           <Icon :icon="stat.icon" class="text-xl text-white" />
         </div>
-        <div class="flex-1 min-w-0"> <!-- Tambahan agar teks tidak meluap -->
-          <!-- Label: Dikecilkan ke 10px -->
+        <div class="flex-1 min-w-0">
           <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400 truncate">
             {{ stat.label }}
-          </p>
-          <!-- Value: Dikecilkan dari 2xl ke lg -->
-          <p class="mt-0.5 text-lg font-black text-slate-800">
+          </p> 
+
+          <!-- <p class="text-[9px] font-bold uppercase tracking-tight text-slate-400 leading-tight">
+            {{ stat.label }}
+          </p> -->
+          <p class="mt-0.5 text-lg font-black text-[#1B293C]">
             <span v-if="loading" class="inline-block h-5 w-12 animate-pulse rounded bg-slate-100" />
-            <span v-else>{{ formatNumber(stat.value) }}</span>
+            <span v-else>{{ stat.value }}</span>
           </p>
         </div>
       </div>
     </section>
 
-    <!-- Visitor Chart -->
-    <section class="glass-panel mt-6 p-6">
+    <!-- Grafik Penjualan -->
+    <section class="glass-panel mt-6 p-6 bg-white">
       <div class="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h2 class="section-title">Visitor Analytics</h2>
-          <p class="text-xs text-slate-500">
-            Monthly visitors in {{ chartYear }}
-          </p>
+          <h2 class="text-lg font-bold text-[#1B293C]">Statistik Literasi</h2>
+          <p class="text-xs text-slate-500">Data bulanan tahun {{ chartYear }}</p>
         </div>
-        <div class="flex items-center gap-2 rounded-xl bg-slate-100 px-3 py-1.5 text-[10px] font-bold text-[#1e293b] border border-slate-200">
-          <Icon icon="solar:graph-new-up-outline" class="text-sm text-[#3b5d95]" />
-          {{ totalVisitors }} TOTAL VISITORS
+        <div class="flex items-center gap-2 rounded-xl bg-slate-50 px-3 py-1.5 text-[10px] font-bold text-[#1B293C] border border-slate-200">
+          <Icon icon="solar:graph-new-up-linear" class="text-sm text-[#00A9C3]" />
+          {{ stats.visitors }} TOTAL PENGUNJUNG
         </div>
       </div>
 
       <div v-if="loading" class="mt-6 flex h-80 items-center justify-center">
-        <div class="flex flex-col items-center gap-2">
-           <div class="w-6 h-6 border-2 border-slate-200 border-t-[#3b5d95] rounded-full animate-spin"></div>
-           <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Loading chart…</p>
-        </div>
+        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest animate-pulse">Memuat Grafik…</p>
       </div>
       <ClientOnly v-else>
         <div class="mt-6" style="width: 100%; height: 320px">
@@ -65,100 +61,67 @@ import { useApi } from "~/composables/useApi";
 
 use([CanvasRenderer, LineChart, BarChart, TitleComponent, TooltipComponent, GridComponent, LegendComponent]);
 
-type MonthlyData = { month: number; label: string; total: number };
-type DashboardResponse = {
-  stats: { services: number; clients: number; products: number; portfolios: number; visitors: number; };
-  monthly_visitors: MonthlyData[];
-  year: number;
-};
-
-const { apiFetch, getErrorMessage } = useApi();
+const { apiFetch } = useApi();
 const loading = ref(true);
-const stats = ref<DashboardResponse["stats"]>({ services: 0, clients: 0, products: 0, portfolios: 0, visitors: 0 });
-const monthlyVisitors = ref<MonthlyData[]>([]);
 const chartYear = ref(new Date().getFullYear());
+const stats = ref({ services: 0, clients: 0, products: 0, portfolios: 0, visitors: 0 });
+const monthlyVisitors = ref<any[]>([]);
 
 const statCards = computed(() => [
-  { key: "services", label: "Services", value: stats.value.services, icon: "solar:suitcase-bold", gradient: "linear-gradient(135deg, #3b5d95, #5a7bb5)" },
-  { key: "clients", label: "Clients", value: stats.value.clients, icon: "solar:users-group-two-rounded-bold", gradient: "linear-gradient(135deg, #1e293b, #334155)" },
-  { key: "products", label: "Products", value: stats.value.products, icon: "solar:bag-2-bold", gradient: "linear-gradient(135deg, #475569, #64748b)" },
-  { key: "portfolios", label: "Portfolios", value: stats.value.portfolios, icon: "solar:gallery-bold", gradient: "linear-gradient(135deg, #3b5d95, #1e293b)" },
-  { key: "visitors", label: "Visitors", value: stats.value.visitors, icon: "solar:eye-bold", gradient: "linear-gradient(135deg, #0f172a, #1e293b)" },
+  { key: "cat", label: "Kategori", value: stats.value.services, icon: "solar:folder-2-bold", color: "#00A9C3" },
+  { key: "cli", label: "Gereja & Jemaat", value: stats.value.clients, icon: "solar:users-group-rounded-bold", color: "#1B293C" },
+  { key: "book", label: "Stok Buku", value: stats.value.products, icon: "solar:book-bold", color: "#00A9C3" },
+  { key: "ord", label: "Pesanan Baru", value: stats.value.portfolios, icon: "solar:mailbox-bold", color: "#1B293C" },
+  { key: "rop", label: "Stok Kritis", value: stats.value.visitors, icon: "solar:bell-bing-bold", color: "#f43f5e" },
 ]);
 
-const totalVisitors = computed(() => formatNumber(stats.value.visitors));
-const formatNumber = (n: number) => n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n);
-
-const chartOption = computed(() => {
-  const labels = monthlyVisitors.value.map((m) => m.label);
-  const data = monthlyVisitors.value.map((m) => m.total);
-  return {
-    tooltip: { trigger: "axis", backgroundColor: "#1e293b", textStyle: { color: "#fff", fontSize: 12 } },
-    grid: { left: "0%", right: "2%", bottom: "0%", containLabel: true },
-    xAxis: { type: "category", data: labels, axisLine: { lineStyle: { color: "#f1f5f9" } }, axisLabel: { color: "#94a3b8", fontSize: 10, fontWeight: 600 } },
-    yAxis: { type: "value", splitLine: { lineStyle: { color: "#f8fafc" } }, axisLabel: { color: "#94a3b8", fontSize: 10 } },
-    series: [
-      { name: "Visitors", type: "bar", data, barWidth: "40%", itemStyle: { borderRadius: [4, 4, 0, 0], color: { type: "linear", x: 0, y: 0, x2: 0, y2: 1, colorStops: [{ offset: 0, color: "#3b5d95" }, { offset: 1, color: "#1e293b" }] } } },
-      { name: "Trend", type: "line", data, smooth: true, showSymbol: false, lineStyle: { width: 2, color: "#3b5d95" } }
-    ],
-  };
-});
+const chartOption = computed(() => ({
+  tooltip: { trigger: "axis", backgroundColor: "#1B293C", textStyle: { color: "#fff" } },
+  grid: { left: "0%", right: "2%", bottom: "0%", containLabel: true },
+  xAxis: { type: "category", data: monthlyVisitors.value.map(m => m.label) },
+  yAxis: { type: "value" },
+  series: [
+    { name: "Pesanan", type: "bar", data: monthlyVisitors.value.map(m => m.total), itemStyle: { color: "#00A9C3", borderRadius: [4, 4, 0, 0] } },
+    { name: "Tren", type: "line", data: monthlyVisitors.value.map(m => m.total), smooth: true, lineStyle: { color: "#1B293C" } }
+  ],
+}));
 
 onMounted(async () => {
   try {
-    const data = await apiFetch<DashboardResponse>("/dashboard");
+    const data: any = await apiFetch("/dashboard");
     stats.value = data.stats;
     monthlyVisitors.value = data.monthly_visitors;
-    chartYear.value = data.year;
-  } catch (error) {
-    console.error("Dashboard error:", getErrorMessage(error, "Unknown error"));
-  } finally {
-    loading.value = false;
-  }
+  } finally { loading.value = false; }
 });
 </script>
+
+<!-- <style scoped>
+@reference "tailwindcss";
+.stat-card { @apply flex items-center gap-3 p-5 rounded-2xl bg-white border border-slate-100 shadow-sm transition-all hover:-translate-y-1 hover:shadow-md; }
+.stat-icon { @apply flex items-center justify-center w-11 h-11 rounded-xl flex-shrink-0 shadow-lg shadow-slate-200; }
+.glass-panel { @apply rounded-[1.5rem] border border-slate-200; }
+</style> -->
 
 <style scoped>
 @reference "tailwindcss";
 
-.stat-card {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem; /* Gap diperkecil agar tidak terlalu lebar */
-  padding: 1.25rem;
-  border-radius: 1.5rem;
-  background: white;
-  border: 1px solid #f1f5f9;
-  box-shadow: 0 4px 20px rgba(15, 23, 42, 0.02);
-  transition: all 0.3s ease;
+.stat-card { 
+  @apply flex items-center gap-2 p-3 rounded-2xl bg-white border border-slate-100 shadow-sm transition-all hover:-translate-y-1; 
+  /* gap dikecilkan dari 3 ke 2, padding dikecilkan dari 5 ke 3 agar ruang teks lebih luas */
+  min-width: 0; 
 }
 
-.stat-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.06);
+.stat-icon { 
+  @apply flex items-center justify-center w-9 h-9 rounded-xl flex-shrink-0; 
+  /* Ukuran icon dikecilkan sedikit dari w-11 ke w-9 */
 }
 
-.stat-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 2.75rem; /* Ikon dikecilkan sedikit */
-  height: 2.75rem;
-  border-radius: 1rem;
-  flex-shrink: 0;
-}
-
-.section-title {
-  font-size: 1.15rem;
-  font-weight: 700;
-  color: #1e293b;
-  letter-spacing: -0.02em;
-}
-
-.glass-panel {
-  border-radius: 2rem;
-  border: 1px solid white;
-  background-color: white;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.02);
+/* Tambahan khusus untuk teks label */
+.stat-card p {
+  display: -webkit-box;
+  -webkit-line-clamp: 2; /* Jika kepanjangan, teks akan turun ke bawah (maks 2 baris) */
+  -webkit-box-orient: vertical;  
+  overflow: hidden;
+  white-space: normal; /* Mengizinkan teks turun ke baris baru */
 }
 </style>

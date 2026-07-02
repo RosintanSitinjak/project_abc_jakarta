@@ -7,11 +7,10 @@ definePageMeta({
 <template>
   <div>
     <LandingHero />
-    <LandingBrands />
+    <LandingTestimoni />
     <LazyLandingServices class="bg-soft" />
-    <LandingFeatureOne />
-    <LandingReviews class="bg-soft"/>
-    <LandingArticles />
-    <LandingCTA />
+    <LandingBestSeller class="bg-soft"/>
+    <LandingLiterasi />
+    <LandingCTA /> 
   </div>
 </template>

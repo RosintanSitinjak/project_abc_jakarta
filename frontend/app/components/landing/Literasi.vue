@@ -2,7 +2,7 @@
   <section class="py-24 bg-white">
     <div class="container mx-auto px-6 lg:px-20">
       <div class="flex justify-between items-end mb-12">
-        <h2 class="text-3xl md:text-5xl font-extrabold text-[#1e293b] tracking-tight">Articles & Insights</h2>
+        <h2 class="text-3xl md:text-5xl font-extrabold text-[#1e293b] tracking-tight">Literasi</h2>
         <NuxtLink to="/articles" class="text-blue font-bold text-sm hover:underline">See All →</NuxtLink>
       </div>
 

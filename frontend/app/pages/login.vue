@@ -27,7 +27,7 @@
 
             <el-button 
               type="primary" 
-              class="w-full !h-11 !rounded-xl !bg-black !border-black !text-white hover:!bg-neutral-800 hover:!border-neutral-800 font-bold uppercase tracking-widest text-xs transition duration-300" 
+              class="w-full !h-11 !rounded-xl !bg-[#00A9C3] !text-white hover:!bg-[#1b293c]  font-bold uppercase tracking-widest text-xs transition duration-300" 
               :loading="isSubmitting" 
               @click="submitForm"
             >
@@ -84,6 +84,13 @@ const submitForm = async () => {
     if (valid) {
       isSubmitting.value = true
       try {
+
+// await $fetch('http://localhost:8000/sanctum/csrf-cookie', {
+//           method: 'GET',
+//           credentials: 'include',
+//         })
+
+
         await apiFetch('/auth/login', {
           method: 'POST',
           body: {

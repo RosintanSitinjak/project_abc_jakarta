@@ -37,9 +37,9 @@ return Application::configure(basePath: dirname(__DIR__))
         //     'api/contact',
         // ]);
 
-        $middleware->validateCsrfTokens(except: [
-    'api/*', // Ini akan mem-bypass CSRF untuk SEMUA rute yang diawali /api/
-]);
+        // $middleware->validateCsrfTokens(except: [
+    // 'api/*', 
+// ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

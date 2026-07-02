@@ -8,7 +8,7 @@ use App\Http\Requests\UpdateClientRequest;
 use App\Models\Client;
 use Illuminate\Http\JsonResponse;
 
-class ClientController extends Controller
+class CustomerController extends Controller
 {
     use ManagesAttachments;
 
