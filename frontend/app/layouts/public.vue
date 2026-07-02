@@ -1,9 +1,9 @@
 <script setup>
 const navLinks = [
   { name: 'Home', path: '/' },
-  { name: 'Services', path: '/services' },
-  { name: 'Articles', path: '/articles' },
-  { name: 'Contact Us', path: '/contact' }
+  { name: 'Katalog', path: '/katalog' },
+  { name: 'Literasi', path: '/articles' },
+  { name: 'Hubungi kami', path: '/contact' }
 ]
 
 const quickLinks = [
@@ -36,7 +36,7 @@ const socialLinks = [
           <!-- Item Email -->
           <div class="flex items-center gap-2 cursor-default">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-white opacity-80"><path d="M3 7a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v10a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-10z"></path><path d="M3 7l9 6l9 -6"></path></svg>
-            <span class="opacity-90">info@intansdigital.com</span>
+            <span class="opacity-90">info@abcjakarta.com</span>
           </div>
           <!-- Item Telepon -->
           <div class="flex items-center gap-2 cursor-default">
