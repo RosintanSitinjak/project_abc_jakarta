@@ -15,13 +15,20 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->trustProxies(at: '*');
         
-        $middleware->api(append: [
-            \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
-        ]);
+        // $middleware->api(append: [
+        //     \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
+        // ]);
 
-        $middleware->alias([
-            'role' => \App\Http\Middleware\RoleMiddleware::class,
-        ]);
+        // $middleware->alias([
+        //     'role' => \App\Http\Middleware\RoleMiddleware::class,
+        // ]);
+
+        // 1. GUNAKAN CARA RESMI INI (Otomatis menangani Sanctum)
+    $middleware->statefulApi(); 
+
+    $middleware->alias([
+        'role' => \App\Http\Middleware\RoleMiddleware::class,
+    ]);
 
         // $middleware->validateCsrfTokens(except: [
         //     'api/public/visitor',

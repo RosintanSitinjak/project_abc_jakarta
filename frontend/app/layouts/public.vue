@@ -134,7 +134,7 @@ const socialLinks = [
 
         <!-- Kolom 4: Contact Us (Hanya Teks yang Hover) -->
         <div class="lg:col-span-3">
-          <h4 class="text-slate-900 font-bold text-base mb-8 tracking-tight uppercase">Contact Us</h4>
+          <h4 class="text-[#1b293c] font-bold text-base mb-8 tracking-tight uppercase">Contact Us</h4>
           <ul class="flex flex-col gap-6">
             
             <!-- Address -->
