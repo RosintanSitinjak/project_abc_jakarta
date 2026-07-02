@@ -6,14 +6,14 @@ enum Role: int
 {
     case Owner = 1;
     case Admin = 2;
-    case Writer = 3;
+    case Pelanggan = 3;
 
     public function label(): string
     {
         return match ($this) {
-            self::Owner => 'Owner',
+            self::Owner => 'Pimpinan ABC Jakarta',
             self::Admin => 'Admin',
-            self::Writer => 'Writer',
+            self::Pelanggan => 'Pelanggan/Gereja',
         };
     }
 }
