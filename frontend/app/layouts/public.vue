@@ -27,10 +27,10 @@ const socialLinks = [
 ]</script>
 
 <template>
-  <div class="min-h-screen bg-white text-[#1e293b] font-sans flex flex-col justify-between selection:bg-primary/10">
+  <div class="min-h-screen bg-[#f2f2f2] text-[#1e293b] font-sans flex flex-col justify-between selection:bg-primary/10">
     
     <!-- 1. TOP BAR (Info Kontak) - STATIS -->
-    <div class="hidden md:block w-full bg-[#1e293b] text-white py-2.5 border-b border-white/5 relative z-[60]">
+    <div class="hidden md:block w-full bg-[#00a9c3] text-white py-2.5 border-b border-white/5 relative z-[60]">
       <div class="container mx-auto px-6 lg:px-10 flex justify-between items-center text-[13px] font-medium">
         <div class="flex items-center gap-8">
           <!-- Item Email -->
@@ -47,17 +47,17 @@ const socialLinks = [
         <!-- Item Lokasi -->
         <div class="flex items-center gap-2 cursor-default">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-white opacity-80"><path d="M9 11a3 3 0 1 0 6 0a3 3 0 0 0 -6 0"></path><path d="M17.657 16.657l-4.243 4.243a2 2 0 0 1 -2.827 0l-4.244 -4.243a8 8 0 1 1 11.314 0z"></path></svg>
-          <span class="opacity-90">Bandung, Indonesia</span>
+          <span class="opacity-90">Jakarta, Indonesia</span>
         </div>
       </div>
     </div>
 
     <!-- 2. STICKY NAVBAR -->
-    <header class="w-full bg-white/95 backdrop-blur-xl sticky top-0 z-[100] border-b border-gray-100 shadow-sm shadow-gray-200/20">
+    <header class="w-full bg-[#f2f2f2] backdrop-blur-xl sticky top-0 z-[100] border-b border-gray-100 shadow-sm shadow-gray-200/20">
       <div class="container mx-auto px-6 lg:px-10 py-4 flex justify-between items-center">
         
         <NuxtLink to="/" class="flex items-center transition-transform hover:scale-105 active:scale-95">
-          <img src="/images/logofixx.png" alt="Logo" class="h-12 md:h-16 w-auto object-contain" />
+          <img src="/images/Asset 1.png" alt="Logo" class="h-12 md:h-16 w-auto object-contain" />
         </NuxtLink>
 
         <nav class="hidden md:flex items-center gap-10">
@@ -75,7 +75,7 @@ const socialLinks = [
         <!-- Button Sign In dengan SVG User -->
         <NuxtLink 
           to="/login" 
-          class="flex items-center gap-2.5 px-7 py-2.5 bg-[#1c232f] text-white text-[14px] font-bold rounded-full shadow-lg hover:bg-[#475c80] transition-all duration-300"
+          class="flex items-center gap-2.5 px-7 py-2.5 bg-[#00a9c3] text-white text-[14px] font-bold rounded-full shadow-lg hover:bg-[#475c80] transition-all duration-300"
         >
           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0"></path><path d="M12 10m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0"></path><path d="M6.168 18.849a4 4 0 0 1 3.832 -2.849h4a4 4 0 0 1 3.834 2.855"></path></svg>
           <span>Sign In</span>
@@ -134,7 +134,7 @@ const socialLinks = [
 
         <!-- Kolom 4: Contact Us (Hanya Teks yang Hover) -->
         <div class="lg:col-span-3">
-          <h4 class="text-slate-900 font-bold text-base mb-8 tracking-tight uppercase">Contact Us</h4>
+          <h4 class="text-[#1b293c] font-bold text-base mb-8 tracking-tight uppercase">Contact Us</h4>
           <ul class="flex flex-col gap-6">
             
             <!-- Address -->

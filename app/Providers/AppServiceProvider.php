@@ -28,16 +28,16 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        Service::observe(ServiceObserver::class);
-        ServiceScopeOfService::observe(ServiceScopeOfServiceObserver::class);
-        Product::observe(ProductObserver::class);
-        Portfolio::observe(PortfolioObserver::class);
+        // Service::observe(ServiceObserver::class);
+        // ServiceScopeOfService::observe(ServiceScopeOfServiceObserver::class);
+        // Product::observe(ProductObserver::class);
+        // Portfolio::observe(PortfolioObserver::class);
 
-        Relation::morphMap([
-            'article' => \App\Models\Article::class,
-            'service' => \App\Models\Service::class,
-            'product' => \App\Models\Product::class,
-            'portfolio' => \App\Models\Portfolio::class,
-        ]);
+        // Relation::morphMap([
+        //     'article' => \App\Models\Article::class,
+        //     'service' => \App\Models\Service::class,
+        //     'product' => \App\Models\Product::class,
+        //     'portfolio' => \App\Models\Portfolio::class,
+        // ]);
     }
 }

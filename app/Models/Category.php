@@ -10,41 +10,21 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Category extends Model
 {
-    /** @use HasFactory<\Database\Factories\CategoryFactory> */
-    use HasFactory;
-    use HasUuids, SoftDeletes;
+    use HasFactory, HasUuids, SoftDeletes;
 
-    /**
-     * The "type" of the primary key ID.
-     *
-     * @var string
-     */
     protected $keyType = 'string';
-
-    /**
-     * Indicates if the IDs are auto-incrementing.
-     *
-     * @var bool
-     */
     public $incrementing = false;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var list<string>
-     */
     protected $fillable = [
         'name',
-        'description',
+        'slug', // GANTI 'description' jadi 'slug' sesuai migration kita tadi
     ];
 
-    public function products(): HasMany
+    // GANTI nama fungsi dari products() menjadi books()
+    public function books(): HasMany
     {
-        return $this->hasMany(Product::class);
+        return $this->hasMany(Book::class); // Arahkan ke model Book
     }
 
-    public function portfolios(): HasMany
-    {
-        return $this->hasMany(Portfolio::class);
-    }
+    // Portfolios hapus saja kalau tidak dipakai di ABC Jakarta
 }
