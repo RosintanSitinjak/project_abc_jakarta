@@ -57,7 +57,7 @@ const socialLinks = [
       <div class="container mx-auto px-6 lg:px-10 py-4 flex justify-between items-center">
         
         <NuxtLink to="/" class="flex items-center transition-transform hover:scale-105 active:scale-95">
-          <img src="/images/Asset 1.png" alt="Logo" class="h-12 md:h-16 w-auto object-contain" />
+          <img src="/images/logo-abc.png" alt="Logo" class="h-12 md:h-16 w-auto object-contain" />
         </NuxtLink>
 
         <nav class="hidden md:flex items-center gap-10">
