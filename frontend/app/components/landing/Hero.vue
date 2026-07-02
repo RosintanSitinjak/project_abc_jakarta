@@ -62,7 +62,7 @@
             <div class="absolute inset-0 bg-corporate-blue/5 blur-[100px] rounded-full scale-90 group-hover:scale-110 transition-transform duration-700"></div>
             
             <img 
-              src="https://www.amazon.com/Health-Wellness-Secrets-That-Change/dp/0828028036" 
+              src="https://m.media-amazon.com/images/I/514Hss7jeLL._AC_UF1000,1000_QL80_.jpg" 
               class="w-full h-auto relative z-10 transform transition-transform duration-500 hover:scale-[1.02]" 
               alt="Hero Digital IT Solutions"
             >
