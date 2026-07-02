@@ -18,9 +18,9 @@ class UserManagementController extends Controller
 
         $query = User::query();
 
-        if ($authUser && $authUser->role !== Role::Owner) {
-            $query->where('role', '!=', Role::Owner);
-        }
+        // if ($authUser && $authUser->role !== Role::Owner) {
+        //     $query->where('role', '!=', Role::Owner);
+        // }
 
         if ($request->filled('search')) {
             $search = $request->search;
@@ -119,10 +119,13 @@ class UserManagementController extends Controller
         $authUser = $request->user();
 
         if ($authUser && $authUser->role === Role::Owner) {
-            return [Role::Owner, Role::Admin, Role::Writer];
+            // return [Role::Owner, Role::Admin, Role::Writer];
+            return [Role::Owner, Role::Admin, Role::Pelanggan];
         }
 
         // Admin can only assign Admin and Writer
-        return [Role::Admin, Role::Writer];
+        // return [Role::Admin, Role::Writer];
+        return [Role::Admin, Role::Pelanggan];
+
     }
 }

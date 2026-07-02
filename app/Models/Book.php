@@ -9,38 +9,24 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-class Product extends Model
+class Book extends Model
 {
-    /** @use HasFactory<\Database\Factories\ProductFactory> */
-    use HasFactory;
-    use HasUuids, SoftDeletes;
+   use HasFactory, HasUuids, SoftDeletes;
 
-    /**
-     * The "type" of the primary key ID.
-     *
-     * @var string
-     */
     protected $keyType = 'string';
-
-    /**
-     * Indicates if the IDs are auto-incrementing.
-     *
-     * @var bool
-     */
     public $incrementing = false;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var list<string>
-     */
     protected $fillable = [
         'category_id',
         'title',
+        'author',       // Tambahkan ini
+        'isbn',         // Tambahkan ini
+        'price',        // Tambahkan ini
+        'member_price', // Tambahkan ini (Harga khusus Penginjil)
+        'stock',        // Tambahkan ini
+        'rop_point',    // Tambahkan ini (Algoritma ROP)
         'description',
-        'feature',
-        'area',
-        'position',
+        'cover_image',  // Tambahkan ini
     ];
 
     public function category(): BelongsTo

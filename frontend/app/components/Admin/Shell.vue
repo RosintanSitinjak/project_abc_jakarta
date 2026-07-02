@@ -188,14 +188,14 @@ const isActiveRoute = (path: string) => route.path === path;
 const navItems = computed(() => {
   const items = [
     { label: "Dashboard", icon: "solar:widget-2-outline", to: "/admin/dashboard" },
-    { label: "Services", icon: "solar:suitcase-outline", to: "/admin/services" },
-    { label: "Clients", icon: "solar:users-group-two-rounded-outline", to: "/admin/clients" },
-    { label: "Products", icon: "solar:bag-2-outline", to: "/admin/products" },
-    { label: "Articles", icon: "solar:document-text-outline", to: "/admin/articles" },
-    { label: "Inquiries", icon: "solar:mailbox-outline", to: "/admin/contacts" },
+    { label: "Kategori", icon: "solar:suitcase-outline", to: "/admin/services" },
+    { label: "Gereja & Jemaat", icon: "solar:users-group-two-rounded-outline", to: "/admin/clients" },
+    { label: "Stok Buku", icon: "solar:bag-2-outline", to: "/admin/products" },
+    { label: "Literasi/Berita", icon: "solar:document-text-outline", to: "/admin/articles" },
+    { label: "Pesanan Masuk", icon: "solar:mailbox-outline", to: "/admin/contacts" },
   ];
   if (authUser.value?.role === Role.Owner || authUser.value?.role === Role.Admin) {
-    items.push({ label: "Users", icon: "solar:user-id-outline", to: "/admin/users" });
+    items.push({ label: "Manajemen User", icon: "solar:user-id-outline", to: "/admin/users" });
   }
   return items;
 });

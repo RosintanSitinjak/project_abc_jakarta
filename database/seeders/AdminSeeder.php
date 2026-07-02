@@ -14,17 +14,32 @@ class AdminSeeder extends Seeder
     public function run(): void
     {
         $users = [
-            ['name' => 'Owner', 'email' => 'owner@lamsolusi.com', 'role' => \App\Enums\Role::Owner],
-            ['name' => 'Admin', 'email' => '2381014@unai.edu', 'role' => \App\Enums\Role::Admin],
-            ['name' => 'Writer', 'email' => 'writer@lamsolusi.com', 'role' => \App\Enums\Role::Writer],
-        ];
+            [
+            'name' => 'Admin ABC Jakarta', 
+            'email' => 'admin@abcjakarta.com', 
+            'role' => \App\Enums\Role::Admin // Tetap gunakan Enum
+        ],
+
+            [
+            'name' => 'Pimpinan ABC Jakarta (Pak Andi)', 
+            'email' => 'pimpinan@abcjakarta.com', 
+            'role' => \App\Enums\Role::Owner // Role Owner/Pimpinan untuk Pak Andi
+        ],
+
+            [
+            'name' => 'Intan Dev', 
+            'email' => '2381014@unai.edu', // Akun pribadi untuk tes
+            'role' => \App\Enums\Role::Admin
+        ],
+    ];
+
 
         foreach ($users as $user) {
             User::firstOrCreate(
                 ['email' => $user['email']],
                 [
                     'name' => $user['name'],
-                    'password' => bcrypt('12345678'),
+                    'password' => bcrypt('12345678'), //password default
                     'role' => $user['role'],
                 ]
             );
