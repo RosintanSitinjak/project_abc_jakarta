@@ -6,11 +6,14 @@ definePageMeta({
 
 <template>
   <div>
-    <LandingHero />
-    <LandingTestimoni />
-    <LazyLandingServices class="bg-soft" />
-    <LandingBestSeller class="bg-soft"/>
-    <LandingLiterasi />
+    <LandingHero /> 
+<LandingBestSeller class="bg-soft"/> 
+<LandingKatalog />
+    <LandingTestimoni /> 
+
+    
+    <LandingLiterasi /> 
+    
     
   </div>
 </template>

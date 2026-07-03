@@ -127,6 +127,11 @@ const socialLinks = [
           </li>
           <li>
             <NuxtLink to="/testimoni" class="text-gray-500 hover:text-[#00a9c3] transition-colors duration-200 flex items-center gap-1.5 group">
+              <span class="w-1.5 h-1.5 rounded-full bg-gray-300 group-hover:bg-[#00a9c3]"></span> Literasi
+            </NuxtLink>
+          </li>
+          <li>
+            <NuxtLink to="/testimoni" class="text-gray-500 hover:text-[#00a9c3] transition-colors duration-200 flex items-center gap-1.5 group">
               <span class="w-1.5 h-1.5 rounded-full bg-gray-300 group-hover:bg-[#00a9c3]"></span> Kesan Pembaca
             </NuxtLink>
           </li>

@@ -1,5 +1,5 @@
 <template>
-    <section class="py-16 bg-[#f2f2f2] relative overflow-hidden">
+    <section class="py-16 bg-white relative overflow-hidden">
   <!-- Elemen Dekoratif Latar Belakang -->
   <div class="absolute -top-40 -right-40 w-96 h-96 bg-[#00a9c3]/5 rounded-full blur-3xl"></div>
   <div class="absolute -bottom-40 -left-40 w-96 h-96 bg-[#00a9c3]/5 rounded-full blur-3xl"></div>
@@ -20,7 +20,7 @@
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
       
       <!-- KARTU BUKU 1 -->
-      <div class="group bg-white rounded-2xl p-5 shadow-[0_4px_15px_rgba(0,0,0,0.02)] border border-gray-100 flex flex-col justify-between transition-all duration-300 hover:-translate-y-1.5 hover:shadow-[0_15px_30px_rgba(0,169,195,0.12)] hover:border-[#00a9c3]/30">
+      <div class="group bg-green rounded-2xl p-5 shadow-[0_4px_15px_rgba(0,0,0,0.02)] border border-gray-100 flex flex-col justify-between transition-all duration-300 hover:-translate-y-1.5 hover:shadow-[0_15px_30px_rgba(0,169,195,0.12)] hover:border-[#00a9c3]/30">
         <div>
           <!-- Wadah Gambar Buku Lebih Kecil -->
           <div class="bg-[#f2f2f2] rounded-xl p-6 mb-4 flex justify-center items-center h-60 relative overflow-hidden group-hover:bg-[#00a9c3]/5 transition-colors duration-300">
