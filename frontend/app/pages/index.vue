@@ -11,6 +11,6 @@ definePageMeta({
     <LazyLandingServices class="bg-soft" />
     <LandingBestSeller class="bg-soft"/>
     <LandingLiterasi />
-    <LandingCTA /> 
+    
   </div>
 </template>
