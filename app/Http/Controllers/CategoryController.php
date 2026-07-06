@@ -2,108 +2,55 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\Concerns\ManagesAttachments;
-use App\Http\Requests\StoreServiceRequest;
-use App\Http\Requests\UpdateServiceRequest;
-use App\Models\Service;
+use App\Models\Category;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 
 class CategoryController extends Controller
 {
-    use ManagesAttachments;
-
-    /**
-     * Display a listing of the resource.
-     */
-    public function index(\Illuminate\Http\Request $request): JsonResponse
+    public function index(): JsonResponse
     {
-        $query = Service::query()
-            ->with(['scopes', 'thumbnail']);
-
-        if ($request->filled('search')) {
-            $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'ILIKE', "%{$search}%")
-                  ->orWhere('description', 'ILIKE', "%{$search}%");
-            });
-        }
-
-        if ($request->filled('sort_by')) {
-            $sortOrder = $request->input('sort_order', 'asc');
-            $query->orderBy($request->sort_by, $sortOrder);
-        } else {
-            $query->latest();
-        }
-
-        $services = $request->paginated ? $query->paginate($request->itemsPerPage) : $query->get();
-
-        return response()->json($services);
+        // Ambil data terbaru
+        return response()->json(Category::latest()->get());
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(StoreServiceRequest $request): JsonResponse
+    public function store(Request $request): JsonResponse
     {
-        $data = $request->validated();
-        $thumbnailId = $data['thumbnail_id'] ?? null;
-        unset($data['thumbnail_id']);
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'description' => 'nullable|string'
+        ]);
 
-        $service = Service::create($data);
-        $this->setSingleAttachment($service, 'thumbnail', $thumbnailId, 'thumbnail');
+        // LOGIKA SAKTI: Membuat slug otomatis agar database tidak error
+        $category = Category::create([
+            'name' => $request->name,
+            'slug' => Str::slug($request->name), // "Sekolah Sabat" jadi "sekolah-sabat"
+            'description' => $request->description,
+        ]);
 
-        \App\Support\PublicCatalogCache::refreshServices();
-
-        return response()->json($service->load(['scopes', 'thumbnail']), 201);
+        return response()->json($category, 201);
     }
 
-    /**
-     * Display the specified resource.
-     */
-    public function show(Service $service): JsonResponse
+    public function update(Request $request, Category $category): JsonResponse
     {
-        return response()->json($service->load(['scopes', 'thumbnail']));
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'description' => 'nullable|string'
+        ]);
+
+        $category->update([
+            'name' => $request->name,
+            'slug' => Str::slug($request->name),
+            'description' => $request->description,
+        ]);
+
+        return response()->json($category);
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(UpdateServiceRequest $request, Service $service): JsonResponse
+    public function destroy(Category $category): JsonResponse
     {
-        $data = $request->validated();
-        $thumbnailId = $data['thumbnail_id'] ?? null;
-        unset($data['thumbnail_id']);
-
-        $service->update($data);
-        $this->setSingleAttachment($service, 'thumbnail', $thumbnailId, 'thumbnail');
-
-        \App\Support\PublicCatalogCache::refreshServices();
-
-        return response()->json($service->load(['scopes', 'thumbnail']));
+        $category->delete();
+        return response()->json(['status' => 'deleted']);
     }
-
-    /**
-     * Remove the specified resource from storage.
-     */
-//     public function destroy(Service $service): JsonResponse
-//     {
-//         $service->delete();
-
-//         return response()->json(['status' => 'deleted']);
-//     }
-// }
-
-public function destroy(Service $service)
-{
-    try {
-        $service->delete();
-        
-        // PENTING: Refresh cache agar data di landing page juga terhapus
-        \App\Support\PublicCatalogCache::refreshServices();
-
-        return response()->json(['message' => 'Service deleted successfully']);
-    } catch (\Exception $e) {
-        return response()->json(['message' => 'Gagal menghapus: ' . $e->getMessage()], 500);
-    }
-}
 }

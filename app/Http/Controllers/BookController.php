@@ -2,105 +2,87 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\Concerns\ManagesAttachments;
-use App\Http\Requests\StoreProductRequest; // Sementara tetap pakai ini dulu agar tidak error
-use App\Http\Requests\UpdateProductRequest; // Sementara tetap pakai ini dulu
-use App\Models\Book; // SUDAH DIGANTI dari Product
+use App\Models\Book;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log; // WAJIB TAMBAHKAN INI
+use Illuminate\Support\Facades\Http;
 
 class BookController extends Controller
 {
-    use ManagesAttachments;
+    use Concerns\ManagesAttachments;
 
-    /**
-     * Menampilkan daftar semua buku.
-     */
     public function index(Request $request): JsonResponse
     {
-        // Ambil data buku beserta kategori dan gambarnya
-        $query = Book::query()
-            ->with(['category', 'thumbnail']);
-
-        // Fitur Pencarian berdasarkan Judul atau Penulis
+        $query = Book::with('category');
+        
         if ($request->filled('search')) {
             $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('title', 'ILIKE', "%{$search}%")
-                  ->orWhere('author', 'ILIKE', "%{$search}%")
-                  ->orWhere('isbn', 'ILIKE', "%{$search}%");
-            });
+            $query->where('title', 'ILIKE', "%{$search}%")
+                  ->orWhere('author', 'ILIKE', "%{$search}%");
         }
 
-        // Fitur Urutkan (Sorting)
-        if ($request->filled('sort_by')) {
-            $sortOrder = $request->input('sort_order', 'asc');
-            $sortBy = $request->sort_by;
-
-            if ($sortBy === 'category.name') {
-                $query->select('books.*')
-                      ->leftJoin('categories', 'books.category_id', '=', 'categories.id')
-                      ->orderBy('categories.name', $sortOrder);
-            } else {
-                $query->orderBy($sortBy, $sortOrder);
-            }
-        } else {
-            $query->latest();
-        }
-
-        // Fitur Paginate (Pembagian halaman)
-        $books = $request->paginated ? $query->paginate($request->itemsPerPage) : $query->get();
-
-        return response()->json($books);
+        return response()->json($query->latest()->get());
     }
 
-    /**
-     * Menyimpan buku baru (Input Admin).
-     */
-    public function store(StoreProductRequest $request): JsonResponse
+    public function store(Request $request): JsonResponse
     {
-        $data = $request->validated();
-        $thumbnailId = $data['thumbnail_id'] ?? null;
-        unset($data['thumbnail_id']);
+        $data = $request->validate([
+            'category_id' => 'required|exists:categories,id',
+            'title'       => 'required|string|max:255',
+            'author'      => 'nullable|string',
+            'isbn'        => 'nullable|string',
+            'price'       => 'required|integer',
+            'member_price'=> 'nullable|integer',
+            'stock'       => 'required|integer',
+            'rop_point'   => 'required|integer',
+            'description' => 'nullable|string',
+        ]);
 
-        $book = Book::create($data); // Menggunakan model Book
-        
-        if ($thumbnailId) {
-            $this->setSingleAttachment($book, 'thumbnail', $thumbnailId, 'thumbnail');
+        $book = Book::create($data);
+
+        // --- CEK ROP SAAT INPUT BARU ---
+        if ($book->stock <= $book->rop_point) {
+            $this->sendRestockNotification($book);
         }
 
-        return response()->json($book->load(['category', 'thumbnail']), 201);
+        return response()->json($book, 201);
     }
 
-    /**
-     * Menampilkan detail satu buku.
-     */
-    public function show(Book $book): JsonResponse
+    public function update(Request $request, Book $book): JsonResponse
     {
-        return response()->json($book->load(['category', 'thumbnail']));
-    }
+        $data = $request->validate([
+            'category_id' => 'required',
+            'title'       => 'required',
+            'price'       => 'required|integer',
+            'stock'       => 'required|integer',
+            'rop_point'   => 'required|integer',
+        ]);
 
-    /**
-     * Memperbarui data buku.
-     */
-    public function update(UpdateProductRequest $request, Book $book): JsonResponse
-    {
-        $data = $request->validated();
-        $thumbnailId = $data['thumbnail_id'] ?? null;
-        unset($data['thumbnail_id']);
+        $book->update($request->all());
 
-        $book->update($data);
-        
-        if ($thumbnailId) {
-            $this->setSingleAttachment($book, 'thumbnail', $thumbnailId, 'thumbnail');
+        // --- CEK ROP SAAT UPDATE DATA ---
+        if ($book->stock <= $book->rop_point) {
+            $this->sendRestockNotification($book);
         }
 
-        return response()->json($book->load(['category', 'thumbnail']));
+        return response()->json($book);
     }
 
-    /**
-     * Menghapus buku.
-     */
+// Pastikan ada ini di paling atas file
+use Illuminate\Support\Facades\Log;
+
+private function sendRestockNotification($book)
+{
+    $adminPhone = '6281376990897'; 
+    $pesan = "⚠️ *PERINGATAN STOK KRITIS*\n" .
+             "Buku: {$book->title}\n" .
+             "Sisa: {$book->stock}\n" .
+             "Segera hubungi IPH untuk restock.";
+
+    // INI PENGGANTI WHATSAPP UNTUK SEMENTARA
+    Log::info("TRIGGER WHATSAPP: Mengirim pesan ke $adminPhone. Isi pesan: $pesan");
+}
     public function destroy(Book $book): JsonResponse
     {
         $book->delete();
