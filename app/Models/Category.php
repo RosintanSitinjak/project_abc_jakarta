@@ -17,7 +17,8 @@ class Category extends Model
 
     protected $fillable = [
         'name',
-        'slug', // GANTI 'description' jadi 'slug' sesuai migration kita tadi
+        'slug',
+        'description', 
     ];
 
     // GANTI nama fungsi dari products() menjadi books()

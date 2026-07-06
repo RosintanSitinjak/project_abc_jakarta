@@ -2,33 +2,32 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Http\JsonResponse;
+// Pastikan model-model ini di-import dengan benar
 use App\Models\Category;
 use App\Models\Customer;
 use App\Models\Book;
 use App\Models\Order;
-use App\Models\Visitor;
-use Carbon\Carbon;
-use Illuminate\Http\JsonResponse;
 
 class DashboardController extends Controller
 {
-    public function index(): JsonResponse
-    {
-       return response()->json([
-        'stats' => [
-            'services'  => \App\Models\Category::count(),
-            'clients'   => \App\Models\Customer::count(),
-            'products'  => \App\Models\Book::count(),
-            'portfolios'=> \App\Models\Order::where('payment_status', 'pending')->count(), // Pesanan Baru
-            'visitors'  => \App\Models\Book::whereRaw('stock <= rop_point')->count(), // Stok Kritis
-        ],
-        // Untuk grafik, sementara biarkan data dummy atau sesuaikan jika sudah ada tabel transaksi
-        'monthly_visitors' => [
-            ['label' => 'Jan', 'total' => 0],
-            ['label' => 'Feb', 'total' => 0],
-            // ... dst
-        ],
-        'year' => date('Year'),
-    ]);
+public function index(): \Illuminate\Http\JsonResponse
+{
+    // Menggunakan try-catch agar jika error, kita bisa lihat pesannya di browser
+    try {
+return response()->json([
+    'stats' => [
+        'services'   => \App\Models\Category::count(), // Muncul di card KATEGORI
+        'clients'    => \App\Models\Customer::count(), // Muncul di card GEREJA & JEMAAT
+        'products'   => \App\Models\Book::count(),     // Muncul di card STOK BUKU
+        'portfolios' => \App\Models\Order::count(),    // Muncul di card PESANAN BARU
+        'visitors'   => \App\Models\Book::whereColumn('stock', '<=', 'rop_point')->count(), // STOK KRITIS
+    ],
+    'monthly_visitors' => [],
+    'year' => date('Y'),
+]);
+    } catch (\Exception $e) {
+        return response()->json(['error' => $e->getMessage()], 500);
     }
+}
 }

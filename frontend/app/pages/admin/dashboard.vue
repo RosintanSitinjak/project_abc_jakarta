@@ -86,12 +86,28 @@ const chartOption = computed(() => ({
   ],
 }));
 
+// onMounted(async () => {
+//   try {
+//     const data: any = await apiFetch("/dashboard");
+//     stats.value = data.stats;
+//     monthlyVisitors.value = data.monthly_visitors;
+//   } finally { loading.value = false; }
+// });
 onMounted(async () => {
   try {
     const data: any = await apiFetch("/dashboard");
-    stats.value = data.stats;
-    monthlyVisitors.value = data.monthly_visitors;
-  } finally { loading.value = false; }
+    
+    // 2. Jika data berhasil didapat, masukkan ke variabel stats
+    if (data && data.stats) {
+      stats.value = data.stats;
+      monthlyVisitors.value = data.monthly_visitors || [];
+      chartYear.value = data.year || new Date().getFullYear();
+    }
+  } catch (error) {
+    console.error("Dashboard error:", error);
+  } finally {
+    loading.value = false;
+  }
 });
 </script>
 

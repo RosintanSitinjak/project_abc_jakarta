@@ -2,86 +2,92 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\Concerns\ManagesAttachments;
-use App\Http\Requests\StoreClientRequest;
-use App\Http\Requests\UpdateClientRequest;
-use App\Models\Client;
+use App\Models\Customer;
+use App\Models\User;
+use App\Enums\Role;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 
 class CustomerController extends Controller
 {
-    use ManagesAttachments;
-
-    /**
-     * Display a listing of the resource.
-     */
-    public function index(\Illuminate\Http\Request $request): JsonResponse
+    public function index(Request $request): JsonResponse
     {
-        $query = Client::query()
-            ->with(['logo']);
-
+        $query = Customer::query();
         if ($request->filled('search')) {
-            $search = $request->search;
-            $query->where('name', 'ILIKE', "%{$search}%");
+            $query->where('name', 'ILIKE', "%{$request->search}%");
         }
-
-        if ($request->filled('sort_by')) {
-            $sortOrder = $request->input('sort_order', 'asc');
-            $query->orderBy($request->sort_by, $sortOrder);
-        } else {
-            $query->orderBy('position', 'asc')->latest();
-        }
-
-        $clients = $request->paginated ? $query->paginate($request->itemsPerPage) : $query->get();
-
-        return response()->json($clients);
+        // Munculkan data terbaru
+        return response()->json($query->latest()->get());
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(StoreClientRequest $request): JsonResponse
+    public function store(Request $request): JsonResponse
     {
-        $data = $request->validated();
-        $logoId = $data['logo_id'] ?? null;
-        unset($data['logo_id']);
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'type' => 'required|in:umum,gereja,penginjil',
+            'phone' => 'nullable|string',
+            'credit_limit' => 'nullable|integer',
+        ]);
 
-        $client = Client::create($data);
-        $this->setSingleAttachment($client, 'logo', $logoId, 'logo');
+        // LOGIKA BISNIS: Validasi Limit berdasarkan tipe
+        $limit = $this->validateCreditLimit($request->type, $request->credit_limit);
 
-        return response()->json($client->load(['logo']), 201);
+        return DB::transaction(function () use ($request, $limit) {
+            // Buat akun user otomatis agar mereka bisa login nantinya
+            $user = User::create([
+                'name' => $request->name,
+                'email' => str_replace(' ', '', strtolower($request->name)) . rand(10,99) . '@abc.com',
+                'password' => Hash::make('12345678'),
+                'role' => Role::Pelanggan,
+            ]);
+
+            $customer = Customer::create([
+                'user_id' => $user->id,
+                'name' => $request->name,
+                'type' => $request->type,
+                'address' => $request->address,
+                'phone' => $request->phone,
+                'credit_limit' => $limit,
+            ]);
+
+            return response()->json($customer, 201);
+        });
     }
 
-    /**
-     * Display the specified resource.
-     */
-    public function show(Client $client): JsonResponse
+    public function update(Request $request, Customer $customer): JsonResponse
     {
-        return response()->json($client->load(['logo']));
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'type' => 'required|in:umum,gereja,penginjil',
+            'phone' => 'nullable|string',
+            'credit_limit' => 'nullable|integer',
+        ]);
+
+        $limit = $this->validateCreditLimit($request->type, $request->credit_limit);
+
+        $customer->update([
+            'name' => $request->name,
+            'type' => $request->type,
+            'address' => $request->address,
+            'phone' => $request->phone,
+            'credit_limit' => $limit,
+        ]);
+
+        return response()->json($customer);
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(UpdateClientRequest $request, Client $client): JsonResponse
+    public function destroy(Customer $customer): JsonResponse
     {
-        $data = $request->validated();
-        $logoId = $data['logo_id'] ?? null;
-        unset($data['logo_id']);
-
-        $client->update($data);
-        $this->setSingleAttachment($client, 'logo', $logoId, 'logo');
-
-        return response()->json($client->load(['logo']));
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(Client $client): JsonResponse
-    {
-        $client->delete();
-
+        $customer->delete();
         return response()->json(['status' => 'deleted']);
+    }
+
+    // Fungsi Pembantu agar kodingan rapi (Don't Repeat Yourself)
+    private function validateCreditLimit($type, $requestedLimit) {
+        if ($type === 'umum') return 0;
+        if ($type === 'penginjil' && $requestedLimit > 5000000) return 5000000;
+        return $requestedLimit ?? 0;
     }
 }
