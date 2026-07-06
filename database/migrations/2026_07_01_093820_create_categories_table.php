@@ -9,21 +9,34 @@ return new class extends Migration
     /**
      * Run the migrations.
      */
-    public function up(): void
-    {
+    // public function up(): void
+    // {
         // Schema::create('categories', function (Blueprint $table) {
         //     $table->uuid('id')->primary();
         //     $table->timestamps();
         //     $table->softDeletes();
 
-        Schema::create('categories', function (Blueprint $table) {
-        $table->uuid('id')->primary(); // Tetap pakai UUID bawaan projectmu
-        $table->string('name');        // TAMBAHKAN INI (Untuk nama: Rohani, Kesehatan, dll)
-        $table->string('slug')->unique(); // TAMBAHKAN INI (Untuk URL rapi)
+    //     Schema::create('categories', function (Blueprint $table) {
+    //     $table->uuid('id')->primary(); // Tetap pakai UUID bawaan projectmu
+    //     $table->string('name');        // TAMBAHKAN INI (Untuk nama: Rohani, Kesehatan, dll)
+    //     $table->string('slug')->unique(); // TAMBAHKAN INI (Untuk URL rapi)
+    //     $table->timestamps();
+    //     $table->softDeletes();         // Tetap biarkan, ini fitur bagus
+    //     });
+    // }
+
+
+    public function up(): void
+{
+    Schema::create('categories', function (Blueprint $table) {
+        $table->uuid('id')->primary();
+        $table->string('name');
+        $table->string('slug')->unique();
+        $table->text('description')->nullable(); // PASTIKAN BARIS INI ADA
         $table->timestamps();
-        $table->softDeletes();         // Tetap biarkan, ini fitur bagus
-        });
-    }
+        $table->softDeletes();
+    });
+}
 
     /**
      * Reverse the migrations.

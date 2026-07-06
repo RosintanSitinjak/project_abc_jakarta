@@ -12,12 +12,19 @@
       <el-table v-loading="loading" :data="categories" stripe>
         <el-table-column prop="name" label="Nama Kategori" />
         <el-table-column prop="description" label="Deskripsi" />
-        <el-table-column label="Aksi" width="150" align="center">
-          <template #default="{ row }">
-            <el-button size="small" type="primary" plain @click="openEdit(row)">Edit</el-button>
-          </template>
-        </el-table-column>
-      </el-table>
+<el-table-column label="Aksi" width="180" align="center">
+  <template #default="{ row }">
+    <div class="flex justify-center gap-2">
+      <el-button size="small" type="primary" plain @click="openEdit(row)">
+        Edit
+      </el-button>
+      <!-- TAMBAHKAN TOMBOL INI -->
+      <el-button size="small" type="danger" plain @click="confirmDelete(row)">
+        Hapus
+      </el-button>
+    </div>
+  </template>
+</el-table-column>      </el-table>
     </section>
 
     <!-- Dialog -->
@@ -87,6 +94,29 @@ const submitForm = async () => {
     loadCategories();
   } catch (e) {
     ElMessage.error('Gagal menyimpan');
+  }
+};
+
+const confirmDelete = async (row: any) => {
+  try {
+    // Memunculkan kotak konfirmasi agar tidak asal hapus
+    await ElMessageBox.confirm(
+      `Apakah Anda yakin ingin menghapus kategori "${row.name}"?`,
+      'Peringatan',
+      {
+        confirmButtonText: 'Ya, Hapus',
+        cancelButtonText: 'Batal',
+        type: 'warning',
+      }
+    );
+
+    // Jika user klik Ya, maka jalankan perintah hapus ke Backend
+    await apiFetch(`/categories/${row.id}`, { method: 'DELETE' });
+    
+    ElMessage.success('Kategori berhasil dihapus');
+    loadCategories(); // Refresh tabel
+  } catch (error) {
+    // Jika user klik Batal, tidak terjadi apa-apa
   }
 };
 
