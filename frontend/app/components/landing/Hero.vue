@@ -1,13 +1,11 @@
 <template>
   <section class="relative overflow-hidden bg-[#f2f2f2] pt-16 pb-20 lg:pt-24 lg:pb-32">
-    <!-- Dekorasi Latar Belakang -->
+  
     <div class="absolute top-0 right-0 -translate-y-12 translate-x-12 w-96 h-96 bg-[#00a9c3]/5 rounded-full blur-3xl -z-10"></div>
     <div class="absolute bottom-0 left-0 translate-y-12 -translate-x-12 w-72 h-72 bg-[#00a9c3]/10 rounded-full blur-3xl -z-10"></div>
 
     <div class="container mx-auto px-6 lg:px-16 relative z-10">
-      <div class="flex flex-col lg:flex-row items-center gap-12 lg:gap-16">
-        
-        <!-- BAGIAN TEKS (KIRI) -->
+      <div class="flex flex-col lg:flex-row items-center gap-12 lg:gap-16"> 
         <div class="flex-1 text-center lg:text-left">
           <!-- Badge -->
           <span class="inline-block px-4 py-1.5 rounded-full bg-[#00a9c3]/10 text-[#00a9c3] text-xs font-bold uppercase tracking-widest mb-6 border border-[#00a9c3]/20">
@@ -28,7 +26,7 @@
             </cite>
           </blockquote>
 
-          <!-- Action Buttons -->
+        
           <div class="flex flex-wrap justify-center lg:justify-start gap-4 mt-8">
             <NuxtLink 
               to="/katalog" 

@@ -1,6 +1,6 @@
 <script setup>
 const navLinks = [
-  { name: 'Home', path: '/' },
+  { name: 'Beranda', path: '/' },
   { name: 'Katalog', path: '/katalog' },
   { name: 'Literasi', path: '/articles' },
   { name: 'Hubungi kami', path: '/contact' }
@@ -87,120 +87,134 @@ const socialLinks = [
       <slot />
     </main>
 
-    <!-- 3. FOOTER MODERN -->
-<footer class="bg-slate-50 pt-24 pb-12 border-t border-slate-200">
-    <div class="container mx-auto px-6 lg:px-20">
+   <footer class="bg-[#f2f2f2] text-gray-700 border-t border-gray-300/50 pt-16 pb-8 relative overflow-hidden">
+  <!-- Elemen Dekoratif Halus -->
+  <div class="absolute bottom-0 right-0 w-72 h-72 bg-[#00a9c3]/5 rounded-full blur-3xl -z-10"></div>
+
+  <div class="max-w-7xl mx-auto px-6 lg:px-8 relative z-10">
+    <!-- Grid Utama Footer -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10 mb-12">
       
-      <!-- Grid Utama -->
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-12 mb-20">
-        
-        <!-- Kolom 1: Logo & Deskripsi (Logo Diperbesar) -->
-        <div class="lg:col-span-4">
-          <img src="/images/logofixx.png" class="h-14 w-auto mb-8 object-contain" alt="Logo Intan-S Digital" />
-          <p class="text-slate-500 text-[15px] leading-relaxed max-w-sm font-medium">
-            End-to-end IT solution provider helping your business digital transformation become more efficient, secure, and modern.
-          </p>
+      <!-- KOLOM 1: LOGO & TENTANG -->
+      <div class="flex flex-col gap-4">
+        <!-- Logo ABC Jakarta -->
+        <div class="flex items-center gap-2">
+          <img 
+            src="/images/logo-abc.png" 
+            alt="Logo ABC Jakarta" 
+            class="h-16 w-auto object-contain"
+          >
+          
         </div>
-
-        <!-- Kolom 2: Quick Links (Hover Teks Biru) -->
-        <div class="lg:col-span-2">
-          <h4 class="text-slate-900 font-bold text-base mb-8 tracking-tight uppercase">Quick Links</h4>
-          <ul class="flex flex-col gap-4">
-            <li v-for="link in quickLinks" :key="link.name">
-              <NuxtLink 
-                :to="link.path" 
-                class="text-slate-500 hover:text-corporate-blue transition-colors duration-300 text-[15px] font-medium inline-block hover:text-black hover:font-bold"
-              >
-                {{ link.name }}
-              </NuxtLink>
-            </li>
-          </ul>
-        </div>
-
-        <!-- Kolom 3: Main Services (Hover Teks Biru) -->
-        <div class="lg:col-span-3">
-          <h4 class="text-slate-900 font-bold text-base mb-8 tracking-tight uppercase">Main Services</h4>
-          <ul class="flex flex-col gap-4">
-            <li v-for="service in servicesList" :key="service">
-              <NuxtLink 
-                to="/services" 
-                class="text-slate-500 hover:text-corporate-blue transition-colors duration-300 text-[15px] font-medium inline-block hover:text-black hover:font-bold"
-              >
-                {{ service }}
-              </NuxtLink>
-            </li>
-          </ul>
-        </div>
-
-        <!-- Kolom 4: Contact Us (Hanya Teks yang Hover) -->
-        <div class="lg:col-span-3">
-          <h4 class="text-[#1b293c] font-bold text-base mb-8 tracking-tight uppercase">Contact Us</h4>
-          <ul class="flex flex-col gap-6">
-            
-            <!-- Address -->
-            <li class="flex items-start gap-4">
-              <!-- Ikon Statis (Tidak Berubah Warna) -->
-              <div class="w-10 h-10 rounded-xl bg-white shadow-sm border border-slate-100 flex items-center justify-center shrink-0">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-400"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
-              </div>
-              <!-- Teks Hover -->
-              <a 
-                href="https://www.google.com/maps/place/Universitas+Advent+Indonesia/@-6.8018891,107.575941,17z/" 
-                target="_blank" 
-                class="text-slate-500 hover:text-corporate-blue transition-colors duration-300 text-[14px] leading-relaxed font-medium hover:text-black hover:font-bold"
-              >
-                Bandung, Indonesia
-              </a>
-            </li>
-
-            <!-- Email -->
-            <li class="flex items-center gap-4">
-              <div class="w-10 h-10 rounded-xl bg-white shadow-sm border border-slate-100 flex items-center justify-center shrink-0">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-400"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
-              </div>
-              <a 
-                href="mailto:info@intansdigital.com" 
-                class="text-slate-500 hover:text-corporate-blue transition-colors duration-300 text-[14px] font-medium hover:text-black hover:font-bold"
-              >
-                info@intansdigital.com
-              </a>
-            </li>
-
-            <!-- WhatsApp -->
-            <li class="flex items-center gap-4">
-              <div class="w-10 h-10 rounded-xl bg-white shadow-sm border border-slate-100 flex items-center justify-center shrink-0">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-400"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
-              </div>
-              <a 
-                href="https://api.whatsapp.com/send?phone=6281376990897" 
-                target="_blank" 
-                class="text-slate-500 hover:text-corporate-blue transition-colors duration-300 text-[14px] font-medium hover:text-black hover:font-bold"
-              >
-                +62 813 7699 0897
-              </a>
-            </li>
-
-          </ul>
-        </div>
-
+        <p class="text-sm text-gray-500 leading-relaxed mt-2">
+          Pusat literatur resmi yang menyediakan buku-buku kesehatan, pertumbuhan mental, keluarga, dan spiritual terpercaya untuk kehidupan yang sehat seutuhnya.
+        </p>
       </div>
 
-      <!-- Footer Bottom -->
-      <div class="pt-8 border-t border-slate-200 flex flex-col md:flex-row justify-between items-center gap-6">
-        <p class="text-slate-400 text-[13px] font-medium uppercase tracking-widest">
-          2026 © <span class="text-slate-900 font-bold tracking-normal">Intan-S Digital</span>. All rights reserved.
-        </p>
-        
-        <!-- Social Icons -->
-        <div class="flex items-center gap-6">
-          <a v-for="social in socialLinks" :key="social.icon" :href="social.url" class="text-slate-400 hover:text-corporate-blue transition-all transform hover:scale-110">
-            <svg v-html="social.svg" xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></svg>
-          </a>
+      <!-- KOLOM 2: TAUTAN NAVIGASI -->
+      <div>
+        <h4 class="text-sm font-bold uppercase tracking-wider text-gray-900 mb-5">Navigasi</h4>
+        <ul class="space-y-3 text-sm">
+          <li>
+            <NuxtLink to="/" class="text-gray-500 hover:text-[#00a9c3] transition-colors duration-200 flex items-center gap-1.5 group">
+              <span class="w-1.5 h-1.5 rounded-full bg-gray-300 group-hover:bg-[#00a9c3]"></span> Beranda
+            </NuxtLink>
+          </li>
+          <li>
+            <NuxtLink to="/katalog" class="text-gray-500 hover:text-[#00a9c3] transition-colors duration-200 flex items-center gap-1.5 group">
+              <span class="w-1.5 h-1.5 rounded-full bg-gray-300 group-hover:bg-[#00a9c3]"></span> Katalog Buku
+            </NuxtLink>
+          </li>
+          <li>
+            <NuxtLink to="/testimoni" class="text-gray-500 hover:text-[#00a9c3] transition-colors duration-200 flex items-center gap-1.5 group">
+              <span class="w-1.5 h-1.5 rounded-full bg-gray-300 group-hover:bg-[#00a9c3]"></span> Literasi
+            </NuxtLink>
+          </li>
+          <li>
+            <NuxtLink to="/testimoni" class="text-gray-500 hover:text-[#00a9c3] transition-colors duration-200 flex items-center gap-1.5 group">
+              <span class="w-1.5 h-1.5 rounded-full bg-gray-300 group-hover:bg-[#00a9c3]"></span> Kesan Pembaca
+            </NuxtLink>
+          </li>
+          <li>
+            <NuxtLink to="/contact" class="text-gray-500 hover:text-[#00a9c3] transition-colors duration-200 flex items-center gap-1.5 group">
+              <span class="w-1.5 h-1.5 rounded-full bg-gray-300 group-hover:bg-[#00a9c3]"></span> Hubungi Kami
+            </NuxtLink>
+          </li>
+        </ul>
+      </div>
+
+      <!-- KOLOM 3: MEDIA SOSIAL -->
+      <div>
+        <h4 class="text-sm font-bold uppercase tracking-wider text-gray-900 mb-5">Media Sosial</h4>
+        <p class="text-sm text-gray-500 mb-4 leading-relaxed">Ikuti kami untuk mendapatkan info buku terbaru dan tips hidup sehat harian:</p>
+        <div class="flex flex-col gap-3 text-sm">
+         <a href="#" class="px-3 py-2 bg-[#00a9c3] text-white hover:text-[#00a9c3] hover:bg-white rounded-xl flex items-center gap-2 shadow-sm transition-all duration-300 border border-gray-200 group" aria-label="Instagram">
+    <svg class="w-4 h-4 fill-current shrink-0" viewBox="0 0 24 24">
+      <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
+    </svg>
+    <span class="text-xs font-semibold tracking-wide uppercase text-white group-hover:text-[#00a9c3] transition-colors duration-300">Instagram</span>
+  </a>
+
+  <!-- Facebook -->
+  <a href="#" class="px-3 py-2 bg-[#00a9c3] text-white hover:text-[#00a9c3] hover:bg-white rounded-xl flex items-center gap-2 shadow-sm transition-all duration-300 border border-gray-200 group" aria-label="Facebook">
+    <svg class="w-4 h-4 fill-current shrink-0" viewBox="0 0 24 24">
+      <path d="M9 8h-3v4h3v12h5v-12h3.642l.358-4h-4v-1.667c0-.955.192-1.333 1.115-1.333h2.885v-5h-3.808c-3.596 0-5.192 1.583-5.192 4.615v3.385z"/>
+    </svg>
+    <span class="text-xs font-semibold tracking-wide uppercase text-white group-hover:text-[#00a9c3] transition-colors duration-300">Facebook</span>
+  </a>
+
+  <!-- YouTube -->
+  <a href="#" class="px-3 py-2 bg-[#00a9c3] text-white hover:text-[#00a9c3] hover:bg-white rounded-xl flex items-center gap-2 shadow-sm transition-all duration-300 border border-gray-200 group" aria-label="YouTube">
+    <svg class="w-4 h-4 fill-current shrink-0" viewBox="0 0 24 24">
+      <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+    </svg>
+    <span class="text-xs font-semibold tracking-wide uppercase text-white group-hover:text-[#00a9c3] transition-colors duration-300">YouTube</span>
+  </a>
         </div>
+      </div>
+
+      <!-- KOLOM 4: KONTAK & LOKASI -->
+      <div>
+        <h4 class="text-sm font-bold uppercase tracking-wider text-gray-900 mb-5">LOKASI & KONTAK</h4>
+        <ul class="space-y-3.5 text-sm text-gray-500">
+          <li class="flex items-start gap-2.5">
+            <svg class="w-5 h-5 text-[#00a9c3] shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+            <span>Adventist Book Center Jakarta, Jl. Dr. Saharjo No.48 4, RT.4/RW.8, Ps. Manggis, Kecamatan Setiabudi, Kota Jakarta Selatan, Daerah Khusus Ibukota Jakarta 12960</span>
+          </li>
+          <li class="flex items-center gap-2.5">
+            <svg class="w-5 h-5 text-[#00a9c3] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.94.725l.548 2.2a1 1 0 01-.321.988l-1.305.98a10.582 10.582 0 004.872 4.872l.98-1.305a1 1 0 01.988-.321l2.2.548a1 1 0 01.725.94V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
+            <span class="font-semibold text-gray-800">+62 812-3456-7890</span>
+          </li>
+          <li class="flex items-start gap-2.5 pt-2 border-t border-gray-300/40">
+            <svg class="w-5 h-5 text-gray-400 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            <div class="text-xs">
+              <p class="font-bold text-gray-700">Senin - Kamis:</p>
+              <p>08:00 - 16:00 WIB</p>
+              <p class="font-bold text-gray-700 mt-1">Jumat:</p>
+              <p>08:00 - 13:00 WIB</p>
+            </div>
+          </li>
+        </ul>
       </div>
 
     </div>
-  </footer>
+
+    <!-- Bagian Hak Cipta (Copyright) -->
+    <div class="border-t border-gray-300/50 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-gray-400 font-medium">
+      <p>© 2026 Adventist Book Center (ABC). Hak Cipta Dilindungi.</p>
+      <div class="flex gap-6">
+        <a href="#" class="hover:text-[#00a9c3]">Kebijakan Privasi</a>
+        <a href="#" class="hover:text-[#00a9c3]">Syarat & Ketentuan</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+
+
+
+
+
 
 
     <!-- Back to Top dengan SVG Arrow -->
