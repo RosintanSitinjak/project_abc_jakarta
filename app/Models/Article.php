@@ -9,31 +9,27 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Article extends Model
 {
-    /** @use HasFactory<\Database\Factories\ArticleFactory> */
-    use HasFactory;
-    use HasUuids, SoftDeletes;
+    use HasFactory, HasUuids, SoftDeletes;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var list<string>
-     */
+    protected $keyType = 'string';
+    public $incrementing = false;
+
     protected $fillable = [
+        'user_id',
         'title',
         'slug',
-        'description',
-        'author_id',
-        'views',
+        'content',
+        'thumbnail_id'
     ];
 
-    public function thumbnail()
-    {
-        return $this->morphOne(Attachment::class, 'attachmentable')
-            ->where('type', 'thumbnail');
-    }
-
+    // Relasi agar tahu siapa penulisnya
     public function author()
     {
-        return $this->belongsTo(User::class, 'author_id');
+        return $this->belongsTo(User::class, 'user_id');
+    }
+    
+    public function thumbnail()
+    {
+        return $this->belongsTo(Attachment::class, 'thumbnail_id');
     }
 }

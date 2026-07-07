@@ -15,7 +15,7 @@
     "@nuxtjs/sitemap": "^7.6.0",
     "@pinia/nuxt": "^0.11.3",
     "@syncfusion/ej2-vue-documenteditor": "^31",
-    "@syncfusion/ej2-vue-richtexteditor": "^31",
+    "@syncfusion/ej2-vue-richtexteditor": "^31.2.18",
     "echarts": "^6.0.0",
     "element-plus": "^2.13.2",
     "laravel-echo": "^2.3.0",

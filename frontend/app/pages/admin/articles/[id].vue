@@ -1,81 +1,97 @@
 <template>
-  <div>
-    <ArticleForm
-      v-if="!loading && initialData"
-      :is-edit="true"
-      :initial-data="initialData"
-      @save="onSave"
-    />
-    <AdminShell v-else>
-      <div class="glass-panel p-6 mb-6 flex items-center justify-center min-h-[400px]">
-        <el-icon class="is-loading text-4xl text-gray-400"><Loading /></el-icon>
+  <AdminShell>
+    <section class="glass-panel p-6 max-w-5xl mx-auto" v-loading="loadingData">
+      <div class="mb-8 flex items-center justify-between">
+        <h2 class="text-2xl font-black text-[#1B293C]">Edit Berita</h2>
+        <el-button @click="$router.back()">Kembali</el-button>
       </div>
-    </AdminShell>
-  </div>
+
+      <el-form label-position="top">
+        <el-form-item label="Judul Berita" required>
+          <el-input v-model="form.title" />
+        </el-form-item>
+
+        <el-form-item label="Konten Berita" required>
+          <ClientOnly>
+            <AdminAppRichTextEditor v-model="form.content" />
+          </ClientOnly>
+        </el-form-item>
+
+        <el-form-item label="Ganti Gambar">
+          <el-upload
+            action="#"
+            list-type="picture-card"
+            :auto-upload="false"
+            :limit="1"
+            v-model:file-list="fileList"
+            :on-change="handleImageChange"
+          >
+            <Icon icon="solar:camera-add-linear" class="text-2xl" />
+          </el-upload>
+        </el-form-item>
+
+        <div class="flex justify-end mt-10">
+          <el-button type="primary" color="#00a9c3" size="large" @click="updateArticle" :loading="busy">
+            Simpan Perubahan
+          </el-button>
+        </div>
+      </el-form>
+    </section>
+  </AdminShell>
 </template>
 
-<script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
-import { Loading } from '@element-plus/icons-vue'
-import AdminShell from '~/components/Admin/Shell.vue'
-import ArticleForm from '~/components/Admin/ArticleForm.vue'
-import { useApi } from '~/composables/useApi'
-import type { ArticleApi, Article } from '~/types/admin'
+<script lang="ts" setup>
+import { Icon } from "@iconify/vue";
+import { onMounted, reactive, ref } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
+import { ElMessage } from 'element-plus';
+import AdminShell from '~/components/Admin/Shell.vue';
+import { useApi } from '~/composables/useApi';
 
-const route = useRoute()
-const router = useRouter()
-const { apiFetch, getErrorMessage } = useApi()
+const route = useRoute();
+const router = useRouter();
+const { apiFetch, uploadAttachment } = useApi();
+const loadingData = ref(true);
+const busy = ref(false);
+const fileList = ref([]);
 
-const loading = ref(true)
-const initialData = ref<Article | null>(null)
+const form = reactive({ title: '', content: '', thumbnail_id: null });
 
-const mapAttachment = (attachment: any) => {
-  if (!attachment) return null
-  return {
-    uid: attachment.id as any,
-    attachmentId: attachment.id,
-    name: attachment.name,
-    url: attachment.path,
-  } as any
-}
-
+// 1. Ambil data berita yang sudah ada
 const loadArticle = async () => {
-  const id = route.params.id as string
   try {
-    const response = await apiFetch<ArticleApi>(`/articles/${id}`)
-    initialData.value = {
-      id: response.id,
-      title: response.title,
-      slug: response.slug,
-      author: response.author ? { id: response.author.id, name: response.author.name } as any : null,
-      description: response.description,
-      thumbnail: mapAttachment(response.thumbnail),
+    const res: any = await apiFetch(`/articles/${route.params.id}`);
+    form.title = res.title;
+    form.content = res.content;
+    form.thumbnail_id = res.thumbnail_id;
+    if (res.thumbnail) {
+        fileList.value = [{ name: res.thumbnail.name, url: res.thumbnail.url }];
     }
-  } catch (error) {
-    ElMessage.error(getErrorMessage(error, 'Failed to fully load article.'))
-    router.push('/admin/articles')
+  } catch (e) {
+    ElMessage.error('Berita tidak ditemukan');
+    router.push('/admin/articles');
   } finally {
-    loading.value = false
+    loadingData.value = false;
   }
-}
+};
 
-const onSave = async (payload: any) => {
-  const id = route.params.id as string
+const handleImageChange = async (file: any) => {
+  const attachment = await uploadAttachment(file.raw, { attachmentableType: 'App\\Models\\Article', type: 'thumbnail' });
+  form.thumbnail_id = attachment.id;
+};
+
+const updateArticle = async () => {
+  busy.value = true;
   try {
-    await apiFetch<ArticleApi>(`/articles/${id}`, {
-      method: 'PUT',
-      body: payload,
-    })
-    ElMessage.success('Article updated successfully.')
-    router.push('/admin/articles')
-  } catch (error) {
-    ElMessage.error(getErrorMessage(error, 'Failed to update article.'))
+    await apiFetch(`/articles/${route.params.id}`, { method: 'PUT', body: form });
+    ElMessage.success('Berhasil diperbarui');
+    router.push('/admin/articles');
+  } catch (e) {
+    ElMessage.error('Gagal update');
+  } finally {
+    busy.value = false;
   }
-}
+};
 
-onMounted(() => {
-  loadArticle()
-})
+onMounted(loadArticle);
 </script>

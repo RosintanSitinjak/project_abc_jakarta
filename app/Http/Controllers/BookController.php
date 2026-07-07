@@ -2,15 +2,19 @@
 
 namespace App\Http\Controllers;
 
+// --- SEMUA IMPORT WAJIB DI SINI (DI LUAR CLASS) ---
 use App\Models\Book;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log; // WAJIB TAMBAHKAN INI
+use Illuminate\Support\Facades\Log; 
 use Illuminate\Support\Facades\Http;
+use App\Http\Controllers\Concerns\ManagesAttachments; // Import alamat Trait yang benar
+// --------------------------------------------------
 
 class BookController extends Controller
 {
-    use Concerns\ManagesAttachments;
+    // Memanggil Trait untuk urusan gambar/file
+    use ManagesAttachments; 
 
     public function index(Request $request): JsonResponse
     {
@@ -41,7 +45,7 @@ class BookController extends Controller
 
         $book = Book::create($data);
 
-        // --- CEK ROP SAAT INPUT BARU ---
+        // --- LOGIKA ROP SAAT INPUT BARU ---
         if ($book->stock <= $book->rop_point) {
             $this->sendRestockNotification($book);
         }
@@ -61,7 +65,7 @@ class BookController extends Controller
 
         $book->update($request->all());
 
-        // --- CEK ROP SAAT UPDATE DATA ---
+        // --- LOGIKA ROP SAAT UPDATE DATA ---
         if ($book->stock <= $book->rop_point) {
             $this->sendRestockNotification($book);
         }
@@ -69,20 +73,19 @@ class BookController extends Controller
         return response()->json($book);
     }
 
-// Pastikan ada ini di paling atas file
-use Illuminate\Support\Facades\Log;
+    private function sendRestockNotification($book)
+    {
+        $adminPhone = '6281376990897'; 
+        $pesan = "⚠️ *PERINGATAN STOK KRITIS*\n\n" .
+                 "Buku: *{$book->title}*\n" .
+                 "Sisa Stok: *{$book->stock}*\n" .
+                 "Batas ROP: {$book->rop_point}\n\n" .
+                 "Mohon segera lakukan pengajuan restock ke IPH.";
 
-private function sendRestockNotification($book)
-{
-    $adminPhone = '6281376990897'; 
-    $pesan = "⚠️ *PERINGATAN STOK KRITIS*\n" .
-             "Buku: {$book->title}\n" .
-             "Sisa: {$book->stock}\n" .
-             "Segera hubungi IPH untuk restock.";
+        // Ini akan mencatat di storage/logs/laravel.log
+        Log::info("WA Terkirim ke Admin: " . $pesan);
+    }
 
-    // INI PENGGANTI WHATSAPP UNTUK SEMENTARA
-    Log::info("TRIGGER WHATSAPP: Mengirim pesan ke $adminPhone. Isi pesan: $pesan");
-}
     public function destroy(Book $book): JsonResponse
     {
         $book->delete();
