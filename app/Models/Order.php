@@ -37,8 +37,13 @@ class Order extends Model
     }
 
     // Relasi ke detail barang yang dibeli
-    public function items(): HasMany
-    {
-        return $this->hasMany(OrderItem::class);
-    }
+    // public function items(): HasMany
+    // {
+    //     return $this->hasMany(OrderItem::class);
+    // }
+
+    public function items(): \Illuminate\Database\Eloquent\Relations\HasMany
+{
+    return $this->hasMany(OrderItem::class);
+}
 }
