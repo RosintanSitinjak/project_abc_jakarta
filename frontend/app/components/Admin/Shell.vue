@@ -164,7 +164,7 @@ const navItems = computed(() => {
     { label: "Dashboard", icon: "solar:widget-2-linear", to: "/admin/dashboard" },
     { label: "Kategori", icon: "solar:folder-2-linear", to: "/admin/categories" },
     { label: "Gereja & Jemaat", icon: "solar:users-group-rounded-linear", to: "/admin/customers" },
-    { label: "Stok Buku", icon: "solar:book-linear", to: "/admin/books" },
+    { label: "Katalog Buku", icon: "solar:book-linear", to: "/admin/books" },
     { label: "Pesanan Masuk", icon: "solar:mailbox-linear", to: "/admin/orders" },
     { label: "Literasi/Berita", icon: "solar:document-text-linear", to: "/admin/articles" },
   ];

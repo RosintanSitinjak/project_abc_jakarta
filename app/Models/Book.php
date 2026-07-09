@@ -6,27 +6,28 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\MorphOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Book extends Model
 {
-   use HasFactory, HasUuids, SoftDeletes;
+    use HasFactory, HasUuids, SoftDeletes;
 
     protected $keyType = 'string';
     public $incrementing = false;
 
+    // PASTIKAN SEMUA KOLOM INI ADA DI SINI
     protected $fillable = [
         'category_id',
         'title',
-        'author',       // Tambahkan ini
-        'isbn',         // Tambahkan ini
-        'price',        // Tambahkan ini
-        'member_price', // Tambahkan ini (Harga khusus Penginjil)
-        'stock',        // Tambahkan ini
-        'rop_point',    // Tambahkan ini (Algoritma ROP)
-        'description',
-        'cover_image',  // Tambahkan ini
+        'slug',
+        'author',
+        'isbn',
+        'price',
+        'member_price', // Tambahkan jika belum ada
+        'stock',        // Tambahkan jika belum ada
+        'rop_point',    // Tambahkan jika belum ada
+        'description',  // Tambahkan jika belum ada
+        'thumbnail_id'  // Tambahkan jika belum ada
     ];
 
     public function category(): BelongsTo
@@ -34,9 +35,8 @@ class Book extends Model
         return $this->belongsTo(Category::class);
     }
 
-    public function thumbnail(): MorphOne
+    public function thumbnail(): BelongsTo
     {
-        return $this->morphOne(Attachment::class, 'attachmentable')
-            ->where('type', 'thumbnail');
+        return $this->belongsTo(Attachment::class, 'thumbnail_id');
     }
 }
