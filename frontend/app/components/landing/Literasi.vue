@@ -1,7 +1,7 @@
 <template>
   <section class="py-20 md:py-24 bg-[#00a9c3]/5 relative overflow-hidden">
     <!-- Dekorasi Latar Belakang Halus -->
-    <div class="absolute top-1/4 right-0 w-72 h-72 bg-[#00a9c3]/5 rounded-full blur-3xl -z-10"></div>
+    <div class="absolute top-1/4 right-0 w-72 h-72 bg-[#00a9c3]/5 rounded-full blur-3xl -z-10 "></div>
 
     <div class="container mx-auto px-6 lg:px-8 max-w-6xl">
       <!-- Header Seksi: Judul & Tombol Lihat Semua -->
@@ -47,7 +47,7 @@
           class="group flex flex-col h-full bg-white transition-all duration-300"
         >
           <!-- Bagian Frame Foto Cover -->
-          <div class="relative aspect-[16/10] overflow-hidden rounded-2xl mb-5 border border-gray-100/70 shadow-sm bg-gray-50">
+          <div class="relative aspect-[16/10] overflow-hidden rounded-2xl mb-5 border border-gray-100/70 shadow-sm bg-gray-50 ">
             <img 
               :src="getThumbnailUrl(item)" 
               :alt="item.title"
@@ -96,7 +96,7 @@ import { computed } from 'vue'
 
 const baseUrlLaravel = 'http://localhost:8000'
 
-// Mengambil data artikel dengan batas maksimal 3 data langsung melalui query API
+// Mengambil data artikel dengan batas maksimal 3 data langsung melalui query API 
 const { data: response, status } = await useFetch(`${baseUrlLaravel}/api/public/articles`, { query: { limit: 3 } })
 
 const articles = computed(() => response.value?.data || response.value || [])

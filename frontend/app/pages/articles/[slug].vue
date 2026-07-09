@@ -167,7 +167,7 @@ useHead({
   color: #111827; /* Gray-900 */
   margin-top: 2.5rem;
   margin-bottom: 0.75rem;
-  tracking-tight;
+  letter-spacing: -0.025em; /* <--- MENGGANTIKAN tracking-tight dengan CSS murni agar valid */
 }
 
 .dynamic-html-content :deep(h2) {
@@ -178,10 +178,9 @@ useHead({
 
 /* Penyelarasan untuk format list di dalam artikel */
 .dynamic-html-content :deep(ul) {
-  list-style-type: cubic-bezier(0.4, 0, 0.2, 1);
+  list-style-type: disc; /* <--- Diperbaiki dari bentuk cubic-bezier yang salah sintaks */
   padding-left: 1.5rem;
   margin-bottom: 1.5rem;
-  space-y: 0.5rem;
 }
 
 .dynamic-html-content :deep(ol) {

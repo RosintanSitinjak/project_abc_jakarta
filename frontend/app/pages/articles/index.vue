@@ -53,7 +53,8 @@
         <div 
           v-for="item in articles" 
           :key="item.id"
-          class="group bg-white rounded-2xl border border-gray-200/50 overflow-hidden shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300 flex flex-col h-full"
+          @click="navigateTo(`/articles/${item.slug}`)"
+          class="group bg-white rounded-2xl border border-gray-200/50 overflow-hidden shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300 flex flex-col h-full cursor-pointer"
         >
           <!-- Bagian Cover Gambar -->
           <div class="relative aspect-[16/10] w-full bg-gray-50 overflow-hidden">
@@ -83,7 +84,8 @@
             <div class="space-y-2.5">
               <!-- Judul Artikel -->
               <h2 class="text-base sm:text-lg font-bold text-gray-900 line-clamp-2 group-hover:text-[#00a9c3] transition-colors duration-200 leading-snug tracking-tight">
-                <NuxtLink :to="`/articles/${item.slug}`">
+                <!-- Menghentikan propagasi klik ganda pada tautan teks bawaan -->
+                <NuxtLink :to="`/articles/${item.slug}`" @click.stop>
                   {{ item.title }}
                 </NuxtLink>
               </h2>
@@ -95,8 +97,8 @@
             </div>
 
             <!-- Bagian Footer Kartu -->
-            <div class="mt-6 pt-4 border-t border-gray-100 flex items-center justify-between">
-              <!-- Penulis -->
+            <div class="mt-6 pt-4 border-t border-gray-100 flex items-center justify-between" @click.stop>
+              <!-- Penulis (Diberi @click.stop agar klik info penulis tidak memicu navigasi ganda) -->
               <div class="flex items-center gap-2">
                 <div class="w-5 h-5 rounded-full bg-gray-100 flex items-center justify-center text-gray-400 font-bold uppercase text-[9px] border border-gray-200">
                   {{ (item.author?.name || 'A')[0] }}
