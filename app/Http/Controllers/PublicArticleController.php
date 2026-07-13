@@ -4,64 +4,24 @@ namespace App\Http\Controllers;
 
 use App\Models\Article;
 use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
 
 class PublicArticleController extends Controller
 {
-    /**
-     * Display a listing of articles for the public landing page.
-     */
-    public function index(Request $request)
+    public function index(): JsonResponse
     {
-        $perPage = $request->get('limit', 10);
+        // PENTING: Harus ada .with('thumbnail') agar link gambar ikut terkirim ke Karla
+        $articles = Article::with(['thumbnail', 'author'])->latest()->get();
         
-        $articles = Article::with('thumbnail')
-            ->when($request->search, function ($query, $search) {
-                $query->where('title', 'ilike', '%' . $search . '%');
-            })
-            ->latest()
-            ->paginate($perPage);
-
         return response()->json($articles);
     }
 
-    /**
-     * Return popular articles ordered by views.
-     */
-    public function popular(Request $request)
+    public function show($slug): JsonResponse
     {
-        $exclude = $request->get('exclude');
-
-        $articles = Article::with('thumbnail')
-            ->when($exclude, function ($query, $excludeSlug) {
-                $query->where('slug', '!=', $excludeSlug);
-            })
-            ->orderByDesc('views')
-            ->limit(5)
-            ->get();
-
-        return response()->json($articles);
+        $article = Article::with(['thumbnail', 'author'])
+            ->where('slug', $slug)
+            ->firstOrFail();
+            
+        return response()->json($article);
     }
-
-    /**
-     * Display a single article by slug and increment view count.
-     */
-    public function show($slug)
-    {
-        // $article = Article::with('thumbnail')->where('slug', $slug)->firstOrFail();
-        // $article->increment('views');
-        // return response()->json($article);
-
-        $article = \App\Models\Article::with(['author', 'thumbnail'])
-                ->where('slug', $slug)
-                ->first();
-
-        if (!$article) {
-            return response()->json(['message' => 'Artikel tidak ditemukan'], 404);
-        }
-
-        return response()->json([
-            'data' => $article
-        ]);
 }
-
-}   
