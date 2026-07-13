@@ -18,6 +18,11 @@ return Application::configure(basePath: dirname(__DIR__))
         // Penting untuk Nuxt + Sanctum
         $middleware->statefulApi();
 
+        $middleware->group('api', [
+            \Illuminate\Session\Middleware\StartSession::class,
+            \Illuminate\View\Middleware\ShareErrorsFromSession::class,
+        ]);
+
         $middleware->alias([
             'role' => \App\Http\Middleware\RoleMiddleware::class,
         ]);

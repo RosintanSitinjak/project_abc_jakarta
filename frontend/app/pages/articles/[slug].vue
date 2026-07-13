@@ -109,17 +109,32 @@ const { data: article, status } = await useAsyncData(`direct-detail-${articleSlu
 
     const baseUrlLaravel = 'http://localhost:8000'
     
-    const rawPath = data.thumbnail?.path || ''
-    const originalPath = rawPath.startsWith('public/') ? rawPath.replace('public/', 'storage/') : rawPath
-    const fullImageUrl = originalPath.startsWith('http') 
-      ? originalPath 
-      : `${baseUrlLaravel}${originalPath.startsWith('/') ? originalPath : '/' + originalPath}`
+    // --- MULAI PERBAIKAN LOGIKA GAMBAR ---
+    let path = data.thumbnail?.path || ''
+
+    // 1. Ganti public/ jadi storage/
+    if (path.startsWith('public/')) {
+      path = path.replace('public/', 'storage/')
+    }
+
+    // 2. Tambahkan storage/ jika belum ada (Solusi buat laptop kamu)
+    if (path && !path.startsWith('http') && !path.startsWith('storage/')) {
+      path = 'storage/' + path
+    }
+
+    const fullImageUrl = path.startsWith('http') 
+      ? path 
+      : `${baseUrlLaravel}${path.startsWith('/') ? path : '/' + path}`
+    // --- SELESAI PERBAIKAN LOGIKA GAMBAR ---
 
     let rawContentHtml = data.description || data.content || ''
 
     if (rawContentHtml && typeof rawContentHtml === 'string') {
+      // Perbaikan agar gambar di dalam isi artikel (v-html) juga muncul
       rawContentHtml = rawContentHtml.replace(/src="\/storage\//g, `src="${baseUrlLaravel}/storage/`)
       rawContentHtml = rawContentHtml.replace(/src="\/api\/attachments\//g, `src="${baseUrlLaravel}/api/attachments/`)
+      // Tambahan: perbaikan jika src di dalam konten langsung ke /attachments/
+      rawContentHtml = rawContentHtml.replace(/src="\/attachments\//g, `src="${baseUrlLaravel}/storage/attachments/`)
     }
 
     return {
@@ -127,7 +142,7 @@ const { data: article, status } = await useAsyncData(`direct-detail-${articleSlu
       title: data.title || 'Tanpa Judul',
       content_html: rawContentHtml || 'Tidak ada konten.',
       author: data.author,
-      thumbnailUrl: originalPath ? fullImageUrl : null
+      thumbnailUrl: path ? fullImageUrl : null
     }
   } catch (err) {
     console.error('Gagal mengambil detail artikel:', err)
@@ -139,7 +154,6 @@ useHead({
   title: computed(() => article.value?.title || 'Detail Artikel'),
 })
 </script>
-
 <style scoped>
 /* Styling presisi untuk elemen gambar di dalam v-html agar rapi */
 .image-fix :deep(img) {

@@ -44,10 +44,10 @@
         <article 
           v-for="item in articles" 
           :key="item.id" 
-          class="group flex flex-col h-full bg-white transition-all duration-300"
+          class="group flex flex-col h-full bg-white rounded-2xl mb-5 transition-all duration-300"
         >
           <!-- Bagian Frame Foto Cover -->
-          <div class="relative aspect-[16/10] overflow-hidden rounded-2xl mb-5 border border-gray-100/70 shadow-sm bg-gray-50 ">
+          <div class="relative aspect-[16/10] overflow-hidden  mb-5 border border-gray-100/70 shadow-sm bg-gray-50 ">
             <img 
               :src="getThumbnailUrl(item)" 
               :alt="item.title"
@@ -108,11 +108,30 @@ const stripHtml = (html) => {
 }
 
 // Menangani pembuatan URL gambar thumbnail dari backend Laravel secara otomatis
+// Menangani pembuatan URL gambar thumbnail dari backend Laravel secara otomatis
 const getThumbnailUrl = (item) => {
-  const rawPath = item.thumbnail?.path || ''
-  if (!rawPath) return '' // Biarkan kosong agar fallback img / alt bekerja
-  const originalPath = rawPath.startsWith('public/') ? rawPath.replace('public/', 'storage/') : rawPath
-  return originalPath.startsWith('http') ? originalPath : `${baseUrlLaravel}${originalPath.startsWith('/') ? originalPath : '/' + originalPath}`
+  // 1. Ambil path mentah dari data thumbnail
+  let path = item.thumbnail?.path || ''
+  
+  // 2. Jika tidak ada path, kembalikan string kosong
+  if (!path) return '' 
+
+  // 3. Jika path diawali 'public/', ganti jadi 'storage/' (standar Laravel)
+  if (path.startsWith('public/')) {
+    path = path.replace('public/', 'storage/')
+  }
+
+  // 4. JIKA path tidak diawali 'http' DAN belum ada kata 'storage/' di depannya,
+  // MAKA kita tambahkan 'storage/' secara otomatis (Ini solusi untuk laptop kamu)
+  if (!path.startsWith('http') && !path.startsWith('storage/')) {
+    path = 'storage/' + path
+  }
+
+  // 5. Pastikan ada tanda '/' di awal path agar penggabungan URL benar
+  const cleanPath = path.startsWith('/') ? path : '/' + path
+  
+  // 6. Gabungkan dengan base URL Laravel jika bukan link eksternal (http)
+  return path.startsWith('http') ? path : `${baseUrlLaravel}${cleanPath}`
 }
 </script>
 

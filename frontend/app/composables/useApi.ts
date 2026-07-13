@@ -21,7 +21,8 @@ let csrfPromise: Promise<void> | null = null
 
 export const useApi = () => {
   const config = useRuntimeConfig()
-  const apiBase = config.public.apiBase.replace(/\/$/, '').replace(/\/api$/, '')
+  const apiBase = config.public.apiBase.replace(/\/$/, '').replace(/\/api\/?$/, '')
+
 
   const getXsrfToken = () => {
     if (process.server) return null
