@@ -97,11 +97,29 @@
             <div class="mt-4 pt-3 border-t border-gray-50 flex items-center justify-between">
               <!-- Komponen Harga -->
               <div class="flex flex-col">
-                <span class="text-[9px] text-gray-400 uppercase tracking-wider font-medium">Harga</span>
-                <span class="text-sm font-extrabold text-[#00a9c3]">
-                  {{ formatPrice(book.price) }}
-                </span>
-              </div>
+  <!-- KONDISI 1: JIKA PENGINJIL SUDAH APPROVED (Hanya mereka yang lihat harga ini) -->
+  <template v-if="isApprovedPL">
+  <span class="text-[9px] text-green-600 font-black uppercase">Harga Khusus Penginjil</span>
+  <div class="flex items-center gap-1.5">
+    <span class="text-sm font-extrabold text-gray-900">{{ formatPrice(book.member_price) }}</span>
+    <span class="text-[10px] text-gray-400 line-through">{{ formatPrice(book.price) }}</span>
+  </div>
+</template>
+
+  <!-- KONDISI 2: JIKA PENGINJIL MASIH PENDING -->
+  <template v-else-if="isPendingPL">
+    <span class="text-sm font-extrabold text-[#00a9c3]">{{ formatPrice(book.price) }}</span>
+    <span class="text-[8px] text-orange-500 font-bold italic leading-none">Verifikasi akun tertunda</span>
+  </template>
+
+  <!-- KONDISI 3: UMUM / JEMAAT / BELUM LOGIN -->
+  <template v-else>
+    <span class="text-[9px] text-gray-400 uppercase tracking-wider font-medium">Harga</span>
+    <span class="text-sm font-extrabold text-[#00a9c3]">
+      {{ formatPrice(book.price) }}
+    </span>
+  </template>
+</div>
 
               <!-- Tombol Detail -->
               <NuxtLink 
@@ -124,63 +142,51 @@
 
 <script lang="ts" setup>
 import { Loading } from '@element-plus/icons-vue'
-import { useApi } from '../../composables/useApi' // Sesuaikan path composable Anda
+import { useApi } from '../../composables/useApi'
+import { useAuth } from '../../composables/useAuth'
 
-definePageMeta({
-  layout: 'public',
-})
+definePageMeta({ layout: 'public' })
 
 const { apiFetch, unwrap } = useApi()
+const { isApprovedPL, isPendingPL } = useAuth()
+const baseUrlLaravel = 'http://127.0.0.1:8000'
 
-// Ganti endpoint sesuai rute API Buku/Katalog Anda di Laravel
 const { data: books, status } = await useAsyncData('public-books', async () => {
   try {
     const response = await apiFetch<any>('/public/books') 
     const rawData = unwrap(response)
-    
     const booksArray = rawData?.data || rawData || []
-    const baseUrlLaravel = 'http://localhost:8000'
 
     return booksArray.map((item: any) => {
-      const rawPath = item.image?.path || item.thumbnail?.path || ''
-      const originalPath = rawPath.startsWith('public/') 
-        ? rawPath.replace('public/', 'storage/') 
-        : rawPath
-        
-      const fullImageUrl = originalPath.startsWith('http')
-        ? originalPath
-        : `${baseUrlLaravel}${originalPath.startsWith('/') ? originalPath : '/' + originalPath}`
+      // LOGIKA GAMBAR (Sama dengan Artikel agar PASTI muncul)
+      let path = item.image?.path || item.thumbnail?.path || ''
+      if (path.startsWith('public/')) path = path.replace('public/', 'storage/')
+      if (path && !path.startsWith('http') && !path.startsWith('storage/')) {
+        path = 'storage/' + path
+      }
+      const fullImageUrl = path.startsWith('http') ? path : `${baseUrlLaravel}/${path}`
   
       return {
         id: item.id,
         slug: item.slug,
         title: item.title,
-        description: item.description,
-        type: item.type || item.category?.name, // Memuat Jenis/Kategori Buku
-        price: item.price || 0, // Memuat Harga Buku
-        coverUrl: originalPath ? fullImageUrl : null
+        description: item.description || '',
+        type: item.category?.name || item.type,
+        // PASTIKAN NAMA VARIABEL HARGA DI BAWAH INI BENAR
+        price: item.price || 0, 
+        member_price: item.member_price || item.price_le || 0, // Mengambil salah satu yang ada
+        coverUrl: path ? fullImageUrl : null
       }
     })
   } catch (err) {
-    console.error('Gagal memuat katalog buku:', err)
+    console.error('Gagal memuat katalog:', err)
     return []
   }
 })
 
-// Fungsi pembersih tag HTML teks deskripsi
-const cleanDescription = (text: string): string => {
-  if (!text) return 'Tidak ada deskripsi singkat untuk buku ini.'
-  return text.replace(/<\/?[^>]+(>|$)/g, "")
-}
-
-// Fungsi pembantu format rupiah (IDR)
-const formatPrice = (price: number): string => {
-  if (!price || price === 0) return 'Gratis / Hubungi Admin'
-  return new Intl.NumberFormat('id-ID', {
-    style: 'currency',
-    currency: 'IDR',
-    maximumFractionDigits: 0
-  }).format(price)
+const cleanDescription = (text: string) => text ? text.replace(/<\/?[^>]+(>|$)/g, "") : ''
+const formatPrice = (price: number) => {
+  return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(price)
 }
 </script>
 
