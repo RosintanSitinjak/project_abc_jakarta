@@ -12,82 +12,84 @@ use Illuminate\Support\Facades\Hash;
 
 class CustomerController extends Controller
 {
+    /**
+     * Tampil Daftar Pelanggan (Untuk menu Gereja & Jemaat)
+     */
     public function index(Request $request): JsonResponse
     {
         $query = Customer::query();
         if ($request->filled('search')) {
             $query->where('name', 'ILIKE', "%{$request->search}%");
         }
-        // Munculkan data terbaru
         return response()->json($query->latest()->get());
     }
 
+    /**
+     * Simpan Pelanggan Baru (Input Admin)
+     */
     public function store(Request $request): JsonResponse
     {
         $request->validate([
             'name' => 'required|string|max:255',
-            'type' => 'required|in:umum,gereja,penginjil',
+            'type' => 'required|in:jemaat,gereja,sekolah,penginjil',
             'phone' => 'nullable|string',
             'credit_limit' => 'nullable|integer',
         ]);
 
-        // LOGIKA BISNIS: Validasi Limit berdasarkan tipe
-        $limit = $this->validateCreditLimit($request->type, $request->credit_limit);
-
-        return DB::transaction(function () use ($request, $limit) {
-            // Buat akun user otomatis agar mereka bisa login nantinya
+        return DB::transaction(function () use ($request) {
+            // Buat akun login otomatis
             $user = User::create([
-                'name' => $request->name,
-                'email' => str_replace(' ', '', strtolower($request->name)) . rand(10,99) . '@abc.com',
+                'name'     => $request->name,
+                'email'    => str_replace(' ', '', strtolower($request->name)) . rand(10,99) . '@abc.com',
                 'password' => Hash::make('12345678'),
-                'role' => Role::Pelanggan,
+                'role'     => Role::Pelanggan,
             ]);
 
+            // Buat detail pelanggan
             $customer = Customer::create([
-                'user_id' => $user->id,
-                'name' => $request->name,
-                'type' => $request->type,
-                'address' => $request->address,
-                'phone' => $request->phone,
-                'credit_limit' => $limit,
+                'user_id'      => $user->id,
+                'name'         => $request->name,
+                'type'         => $request->type,
+                'status'       => ($request->type === 'penginjil') ? 'pending' : 'approved',
+                'address'      => $request->address,
+                'phone'        => $request->phone,
+                'credit_limit' => $request->credit_limit ?? 0,
             ]);
 
             return response()->json($customer, 201);
         });
     }
 
+    /**
+     * Update Data Pelanggan
+     */
     public function update(Request $request, Customer $customer): JsonResponse
     {
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'type' => 'required|in:umum,gereja,penginjil',
-            'phone' => 'nullable|string',
-            'credit_limit' => 'nullable|integer',
-        ]);
-
-        $limit = $this->validateCreditLimit($request->type, $request->credit_limit);
-
-        $customer->update([
-            'name' => $request->name,
-            'type' => $request->type,
-            'address' => $request->address,
-            'phone' => $request->phone,
-            'credit_limit' => $limit,
-        ]);
-
+        $customer->update($request->all());
         return response()->json($customer);
     }
 
+    /**
+     * FITUR VERIFIKASI PL (Sesuai Skripsi)
+     * Mengubah status PENDING menjadi APPROVED
+     */
+    public function approve($id): JsonResponse
+    {
+        $customer = Customer::findOrFail($id);
+        
+        $customer->update([
+            'status' => 'approved'
+        ]);
+
+        return response()->json(['message' => 'Akun Penginjil berhasil diaktifkan!']);
+    }
+
+    /**
+     * Hapus Pelanggan
+     */
     public function destroy(Customer $customer): JsonResponse
     {
         $customer->delete();
         return response()->json(['status' => 'deleted']);
-    }
-
-    // Fungsi Pembantu agar kodingan rapi (Don't Repeat Yourself)
-    private function validateCreditLimit($type, $requestedLimit) {
-        if ($type === 'umum') return 0;
-        if ($type === 'penginjil' && $requestedLimit > 5000000) return 5000000;
-        return $requestedLimit ?? 0;
     }
 }
