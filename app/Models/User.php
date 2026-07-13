@@ -3,6 +3,7 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -75,5 +76,11 @@ class User extends Authenticatable
     public function attachments(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany(Attachment::class);
+    }
+
+    public function customer(): HasOne
+    {
+        // Satu user login hanya punya satu profil pelanggan (Gereja/Jemaat/PL)
+        return $this->hasOne(Customer::class);
     }
 }
