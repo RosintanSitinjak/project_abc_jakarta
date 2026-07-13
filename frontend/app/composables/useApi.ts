@@ -33,11 +33,12 @@ export const useApi = () => {
 
   const hasSessionCookie = () => {
     if (process.server) return false
-    const cookieNames = document.cookie
-      .split(';')
-      .map((cookie) => cookie.trim().split('=')[0])
-      .filter(Boolean)
-    return cookieNames.some((name) => name && (name.endsWith('-session') || name.endsWith('_session')))
+    const cookies = document.cookie.split(';')
+    // Laravel 11/12 biasanya menamakan cookie: laravel_session atau XSRF-TOKEN
+    return cookies.some((cookie) => {
+      const name = cookie.trim().split('=')[0]
+      return name === 'XSRF-TOKEN' || name.includes('_session') || name.includes('-session')
+    })
   }
 
   const ensureCsrf = async () => {
