@@ -1,4 +1,17 @@
 <script setup>
+// 1. Ambil data login dan fungsi logout dari composable
+const { authUser, logout } = useAuth()
+
+const handleLogout = async () => {
+  try {
+    await logout()
+    // Setelah logout, authUser otomatis jadi null dan tombol Sign In muncul kembali
+  } catch (err) {
+    console.error('Gagal logout', err)
+  }
+}
+
+// 2. Navigasi Header
 const navLinks = [
   { name: 'Beranda', path: '/' },
   { name: 'Katalog', path: '/katalog' },
@@ -6,6 +19,7 @@ const navLinks = [
   { name: 'Hubungi kami', path: '/contact' }
 ]
 
+// 3. Data untuk Footer (Quick Links & Sosmed)
 const quickLinks = [
   { name: 'Home', path: '/' },
   { name: 'Services', path: '/services' },
@@ -24,7 +38,8 @@ const socialLinks = [
   { icon: 'fb', url: '#', svg: '<path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"></path>' },
   { icon: 'in', url: '#', svg: '<path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"></path><rect x="2" y="9" width="4" height="12"></rect><circle cx="4" cy="4" r="2"></circle>' },
   { icon: 'ig', url: '#', svg: '<rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>' }
-]</script>
+]
+</script>
 
 <template>
   <div class="min-h-screen bg-[#f2f2f2] text-[#1e293b] font-sans flex flex-col justify-between selection:bg-primary/10">
@@ -73,13 +88,34 @@ const socialLinks = [
         </nav>
 
         <!-- Button Sign In dengan SVG User -->
-        <NuxtLink 
-          to="/login" 
-          class="flex items-center gap-2.5 px-7 py-2.5 bg-[#00a9c3] text-white text-[14px] font-bold rounded-full shadow-lg hover:bg-[#475c80] transition-all duration-300"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0"></path><path d="M12 10m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0"></path><path d="M6.168 18.849a4 4 0 0 1 3.832 -2.849h4a4 4 0 0 1 3.834 2.855"></path></svg>
-          <span>Sign In</span>
-        </NuxtLink>
+        <!-- GANTI BLOK SIGN IN LAMA DENGAN INI -->
+<div class="flex items-center gap-4">
+  <!-- JIKA SUDAH LOGIN -->
+  <template v-if="authUser">
+    <div class="flex items-center gap-4">
+      <div class="text-right hidden sm:block leading-none">
+        <p class="text-[10px] font-bold text-[#00a9c3] uppercase tracking-widest mb-1">Selamat Datang,</p>
+        <p class="text-sm font-black text-[#1e293b]">{{ authUser.name }}</p>
+      </div>
+      <button 
+        @click="handleLogout"
+        class="px-5 py-2 border-2 border-red-100 text-red-500 text-[12px] font-bold rounded-full hover:bg-red-50 transition-all active:scale-95"
+      >
+        Logout
+      </button>
+    </div>
+  </template>
+
+  <!-- JIKA BELUM LOGIN (Tampilan awal kamu) -->
+  <NuxtLink 
+    v-else
+    to="/login" 
+    class="flex items-center gap-2.5 px-7 py-2.5 bg-[#00a9c3] text-white text-[14px] font-bold rounded-full shadow-lg hover:bg-[#475c80] transition-all duration-300"
+  >
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0"></path><path d="M12 10m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0"></path><path d="M6.168 18.849a4 4 0 0 1 3.832 -2.849h4a4 4 0 0 1 3.834 2.855"></path></svg>
+    <span>Sign In</span>
+  </NuxtLink>
+</div>
       </div>
     </header>
 
