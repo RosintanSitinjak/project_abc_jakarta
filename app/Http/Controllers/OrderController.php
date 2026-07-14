@@ -15,20 +15,21 @@ class OrderController extends Controller
 {
     public function index()
     {
-        // Load relasi customer agar nama pelanggan muncul di tabel
         return response()->json(Order::with('customer')->latest()->get());
     }
 
     public function store(Request $request)
     {
         $request->validate([
-            'customer_id' => 'required',
+            'customer_id' => 'required|exists:customers,id',
             'payment_method' => 'required',
             'items' => 'required|array',
             'total_amount' => 'required'
         ]);
 
         return DB::transaction(function () use ($request) {
+            $customer = Customer::find($request->customer_id);
+
             $order = Order::create([
                 'customer_id' => $request->customer_id,
                 'order_number' => 'INV-' . date('Ymd') . '-' . strtoupper(Str::random(4)),
@@ -36,20 +37,30 @@ class OrderController extends Controller
                 'payment_method' => $request->payment_method,
                 'payment_status' => $request->payment_method === 'kredit' ? 'unpaid' : 'paid',
                 'shipping_status' => 'pending',
-                'source' => 'admin_manual',
+                'source' => $request->input('source', 'admin_manual'),
+                'created_at' => $request->date,
             ]);
 
+            // LOGIKA SKRIPSI: Jika beli Kredit, tambahkan ke saldo hutang pelanggan
+            if ($order->payment_status === 'unpaid') {
+                $customer->increment('current_debt', $order->total_amount);
+            }
+
             foreach ($request->items as $item) {
+                $book = Book::find($item['book_id']);
+                $finalPrice = ($customer->type === 'penginjil') ? ($book->member_price ?? $book->price) : $book->price;
+
                 $order->items()->create([
-                    'book_id' => $item['book_id'],
+                    'book_id' => $book->id,
                     'qty' => $item['qty'],
-                    'price_at_purchase' => $item['price'],
+                    'price_at_purchase' => $finalPrice,
                 ]);
 
-                // Potong Stok
-                $book = Book::find($item['book_id']);
                 if ($book) {
                     $book->decrement('stock', $item['qty']);
+                    if ($book->stock <= $book->rop_point) {
+                        Log::info("🚨 ROP ALERT: Buku '{$book->title}' sisa {$book->stock}.");
+                    }
                 }
             }
 
@@ -57,23 +68,41 @@ class OrderController extends Controller
         });
     }
 
-    // --- FUNGSI UPDATE STATUS (UNTUK VERIFIKASI) ---
     public function update(Request $request, $id)
     {
         $order = Order::findOrFail($id);
         
-        // Hanya izinkan update status pembayaran dan pengiriman
+        // Simpan status lama sebelum diupdate
+        $oldPaymentStatus = $order->payment_status;
+
         $order->update($request->only(['payment_status', 'shipping_status']));
+
+        // LOGIKA SKRIPSI: Jika status berubah dari BELUM BAYAR ke LUNAS, kurangi hutang pelanggan
+        if ($oldPaymentStatus === 'unpaid' && $order->payment_status === 'paid') {
+            $customer = Customer::find($order->customer_id);
+            if ($customer) {
+                $customer->decrement('current_debt', $order->total_amount);
+            }
+        }
 
         return response()->json($order);
     }
 
-    // --- FUNGSI HAPUS TRANSAKSI ---
     public function destroy($id)
     {
         $order = Order::findOrFail($id);
-        $order->delete(); // Karena pakai SoftDeletes, data tidak hilang dari DB tapi hilang dari tabel web
 
-        return response()->json(['status' => 'deleted']);
+        return DB::transaction(function () use ($order) {
+            // Jika pesanan yang dihapus berstatus Belum Bayar, kurangi saldo hutang dulu
+            if ($order->payment_status === 'unpaid') {
+                $customer = Customer::find($order->customer_id);
+                if ($customer) {
+                    $customer->decrement('current_debt', $order->total_amount);
+                }
+            }
+            
+            $order->delete();
+            return response()->json(['status' => 'deleted']);
+        });
     }
 }
