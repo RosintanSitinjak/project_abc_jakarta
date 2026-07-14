@@ -137,6 +137,7 @@ definePageMeta({
 
 const { apiFetch, unwrap } = useApi()
 
+// 1. Mengambil data artikel dengan logika perbaikan path gambar
 const { data: articles, status } = await useAsyncData('public-articles', async () => {
   try {
     const response = await apiFetch<any>('/public/articles')
@@ -146,14 +147,22 @@ const { data: articles, status } = await useAsyncData('public-articles', async (
     const baseUrlLaravel = 'http://localhost:8000'
 
     return articlesArray.map((item: any) => {
-      const rawPath = item.thumbnail?.path || ''
-      const originalPath = rawPath.startsWith('public/') 
-        ? rawPath.replace('public/', 'storage/') 
-        : rawPath
-        
-      const fullImageUrl = originalPath.startsWith('http')
-        ? originalPath
-        : `${baseUrlLaravel}${originalPath.startsWith('/') ? originalPath : '/' + originalPath}`
+      let path = item.thumbnail?.path || ''
+
+      // Ganti public/ ke storage/
+      if (path.startsWith('public/')) {
+        path = path.replace('public/', 'storage/')
+      }
+
+      // Tambahkan storage/ jika belum ada (Solusi untuk laptop Anda)
+      if (path && !path.startsWith('http') && !path.startsWith('storage/')) {
+        path = 'storage/' + path
+      }
+
+      // Gabungkan dengan URL Backend
+      const fullImageUrl = path.startsWith('http')
+        ? path
+        : `${baseUrlLaravel}${path.startsWith('/') ? path : '/' + path}`
   
       return {
         id: item.id,
@@ -161,7 +170,7 @@ const { data: articles, status } = await useAsyncData('public-articles', async (
         title: item.title,
         description: item.description,
         author: item.author,
-        thumbnailUrl: originalPath ? fullImageUrl : null
+        thumbnailUrl: path ? fullImageUrl : null 
       }
     })
   } catch (err) {
@@ -170,10 +179,11 @@ const { data: articles, status } = await useAsyncData('public-articles', async (
   }
 })
 
+// 2. Tambahkan Fungsi ini kembali agar tidak error "_ctx.cleanDescription is not a function"
 const cleanDescription = (text: string): string => {
   if (!text) return 'Klik selengkapnya untuk membaca pembahasan.'
-  const cleanText = text.replace(/<\/?[^>]+(>|$)/g, "")
-  return cleanText
+  // Menghapus tag HTML (seperti <p>, <b>, dll) agar deskripsi tampil bersih
+  return text.replace(/<\/?[^>]+(>|$)/g, "")
 }
 </script>
 

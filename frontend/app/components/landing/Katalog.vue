@@ -84,12 +84,22 @@
             <!-- Bagian Footer Kartu (Harga & Aksi) -->
             <div class="mt-5 pt-3 border-t border-gray-50 flex items-end justify-between">
               <!-- Harga -->
-              <div class="flex flex-col">
-                <span class="text-[9px] text-gray-400 uppercase tracking-wider font-medium">Investasi</span>
-                <span class="text-xs sm:text-sm font-extrabold text-[#00a9c3]">
-                  {{ formatPrice(book.price) }}
-                </span>
-              </div>
+              <!-- Bagian Harga di Beranda -->
+<div class="mt-2">
+  <template v-if="isApprovedPL">
+    <!-- Tampilan Harga Penginjil -->
+    <div class="flex items-center gap-2">
+      <span class="text-sm font-black text-gray-900">{{ formatPrice(book.member_price) }}</span>
+      <span class="text-[10px] text-gray-400 line-through">{{ formatPrice(book.price) }}</span>
+    </div>
+    <p class="text-[8px] text-green-600 font-bold uppercase">Harga Khusus LE</p>
+  </template>
+  
+  <template v-else>
+    <!-- Tampilan Harga Normal -->
+    <span class="text-sm font-black text-[#00a9c3]">{{ formatPrice(book.price) }}</span>
+  </template>
+</div>
 
               <!-- Tombol Aksi: Tinjau Lebih Jauh -->
               <NuxtLink 
@@ -108,19 +118,34 @@
 
 <script setup>
 import { computed } from 'vue'
+// 1. Import useAuth agar harga Penginjil juga jalan di Beranda
+const { isApprovedPL } = useAuth() 
 
-const baseUrlLaravel = 'http://localhost:8000'
+// 2. Gunakan IP 127.0.0.1 agar konsisten dengan sistem login
+const baseUrlLaravel = 'http://127.0.0.1:8000'
 
-// Mengambil data dari endpoint katalog/books Anda (Batas maksimal 4 item untuk row beranda)
+// Mengambil data dari endpoint katalog/books (Batas maksimal 4 item)
 const { data: response, status } = await useFetch(`${baseUrlLaravel}/api/public/books`, { query: { limit: 4 } })
 
 const books = computed(() => {
   const rawData = response.value?.data || response.value || []
   
   return rawData.map(item => {
-    const rawPath = item.image?.path || item.thumbnail?.path || ''
-    const originalPath = rawPath.startsWith('public/') ? rawPath.replace('public/', 'storage/') : rawPath
-    const fullImageUrl = originalPath.startsWith('http') ? originalPath : `${baseUrlLaravel}${originalPath.startsWith('/') ? originalPath : '/' + originalPath}`
+    // --- LOGIKA PINTAR GAMBAR ---
+    let path = item.image?.path || item.thumbnail?.path || ''
+    
+    if (path.startsWith('public/')) {
+      path = path.replace('public/', 'storage/')
+    }
+
+    // Jika belum ada kata 'storage/' di depan, kita tambahkan (solusi untuk laptop kamu)
+    if (path && !path.startsWith('http') && !path.startsWith('storage/')) {
+      path = 'storage/' + path
+    }
+
+    const cleanPath = path.startsWith('/') ? path : '/' + path
+    const fullImageUrl = path.startsWith('http') ? path : `${baseUrlLaravel}${cleanPath}`
+    // ----------------------------
 
     return {
       id: item.id,
@@ -129,20 +154,21 @@ const books = computed(() => {
       description: item.description,
       type: item.type || item.category?.name,
       price: item.price || 0,
-      coverUrl: rawPath ? fullImageUrl : null
+      member_price: item.member_price || item.price_le || 0, // Ambil harga khusus PL
+      coverUrl: path ? fullImageUrl : null
     }
   })
 })
 
-// Fungsi pembersih tag HTML teks deskripsi
+// Fungsi pembersih tag HTML
 const stripHtml = (html) => {
   if (!html) return 'Klik untuk meninjau detail informasi buku.'
   return html.replace(/<[^>]*>?/gm, '') || ''
 }
 
-// Fungsi pembantu format rupiah (IDR)
+// Fungsi format rupiah
 const formatPrice = (price) => {
-  if (!price || price === 0) return 'Gratis'
+  if (!price || price === 0) return 'Hubungi Admin'
   return new Intl.NumberFormat('id-ID', {
     style: 'currency',
     currency: 'IDR',
