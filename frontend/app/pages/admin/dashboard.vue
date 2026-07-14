@@ -111,7 +111,7 @@ const formatPrice = (n: number) => new Intl.NumberFormat('id-ID').format(n);
 
 const statCards = computed(() => [
   { key: "cat", label: "Kategori", value: stats.value.categories, icon: "solar:folder-2-bold", color: "#00A9C3" },
-  { key: "book", label: "Buku Terdaftar", value: stats.value.books, icon: "solar:book-bold", color: "#1B293C" },
+  { key: "book", label: "Total Buku", value: stats.value.books, icon: "solar:book-bold", color: "#1B293C" },
   { key: "piutang", label: "Total Piutang", value: 'Rp ' + formatPrice(stats.value.total_piutang), icon: "solar:wad-of-money-bold", color: "#f59e0b" },
   { key: "ord", label: "Belum Lunas", value: stats.value.new_orders, icon: "solar:clipboard-list-bold", color: "#1B293C" },
   { key: "rop", label: "Stok Kritis", value: stats.value.low_stock, icon: "solar:bell-bing-bold", color: "#f43f5e" },

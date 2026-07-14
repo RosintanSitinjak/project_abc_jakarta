@@ -65,13 +65,22 @@ class UserManagementController extends Controller
         return response()->json($user_management->fresh());
     }
 
-    public function destroy(Request $request, User $user_management): JsonResponse
-    {
-        if ($request->user()->role !== Role::Owner && $user_management->role === Role::Owner) {
-            return response()->json(['message' => 'Dilarang menghapus data Pimpinan.'], 403);
-        }
-
-        $user_management->delete();
-        return response()->json(['status' => 'deleted']);
+public function destroy(Request $request, User $user_management): JsonResponse
+{
+    // 1. Proteksi Pimpinan (Tetap ada)
+    if ($request->user()->role !== Role::Owner && $user_management->role === Role::Owner) {
+        return response()->json(['message' => 'Anda dilarang menghapus data Pimpinan.'], 403);
     }
+
+    // 2. LOGIKA SAKTI: Hapus data pelanggan yang nyangkut ke user ini
+    // Kita cek dulu, apakah user ini punya data di tabel customers?
+    if ($user_management->customer) {
+        $user_management->customer->delete(); // Hapus buntutnya (Customer)
+    }
+
+    // 3. Baru hapus akun loginnya
+    $user_management->delete(); // Hapus kepalanya (User)
+
+    return response()->json(['status' => 'deleted']);
+}
 }
