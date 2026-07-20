@@ -11,7 +11,6 @@
           <el-input v-model="searchQuery" placeholder="Cari judul..." clearable class="w-full sm:w-64">
             <template #prefix><Icon icon="solar:magnifer-linear" /></template>
           </el-input>
-          <!-- Tombol Tambah Berita -->
           <el-button type="primary" color="#00A9C3" @click="goToCreate">
             + Tambah Berita/Literasi
           </el-button>
@@ -21,26 +20,35 @@
       <!-- TABEL DAFTAR BERITA -->
       <div class="mt-6 overflow-x-auto">
         <el-table :data="articles" v-loading="loading" stripe border class="w-full rounded-xl overflow-hidden">
-          <el-table-column prop="title" label="Judul Berita" min-width="250" />
-          
-          <el-table-column label="Penulis" width="150">
+          <el-table-column label="Gambar" width="100" align="center">
             <template #default="{ row }">
-              {{ row.author?.name || 'Admin' }}
+              <el-image 
+                v-if="row.thumbnail?.url" 
+                :src="row.thumbnail.url" 
+                class="h-10 w-16 rounded shadow-sm" 
+                fit="cover" 
+              />
+              <Icon v-else icon="solar:gallery-linear" class="text-2xl text-slate-200" />
             </template>
           </el-table-column>
 
-<el-table-column label="Gambar" width="120" align="center">
-  <template #default="{ row }">
-    <!-- GANTI INI: panggil row.thumbnail.url -->
-    <el-image 
-      v-if="row.thumbnail?.url" 
-      :src="row.thumbnail.url" 
-      class="h-10 w-16 rounded shadow-sm" 
-      fit="cover" 
-    />
-    <span v-else class="text-[10px] text-slate-400 italic">No Image</span>
-  </template>
-</el-table-column>
+          <el-table-column prop="title" label="Judul Berita" min-width="200" />
+          
+          <el-table-column label="Status" width="120" align="center">
+            <template #default="{ row }">
+              <el-tag :type="row.status === 'published' ? 'success' : 'info'" effect="dark">
+                {{ row.status === 'published' ? 'Tayang' : 'Draft' }}
+              </el-tag>
+            </template>
+          </el-table-column>
+
+          <el-table-column label="Tanggal Posting" width="150" align="center">
+            <template #default="{ row }">
+              <span class="text-xs text-slate-600">
+                {{ new Date(row.created_at).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) }}
+              </span>
+            </template>
+          </el-table-column>
 
           <el-table-column label="Aksi" width="120" align="center">
             <template #default="{ row }">
@@ -64,20 +72,17 @@
 import { Icon } from "@iconify/vue";
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { onMounted, ref, watch } from 'vue';
-import { useRouter } from 'vue-router'; // Wajib import router
+import { useRouter } from 'vue-router';
 import AdminShell from '~/components/Admin/Shell.vue';
 import { useApi } from '~/composables/useApi';
 
-// Inisialisasi
 const router = useRouter();
 const { apiFetch, unwrap } = useApi();
 
-// State
 const articles = ref([]);
 const loading = ref(false);
 const searchQuery = ref('');
 
-// Fungsi ambil data dari Backend
 const loadArticles = async () => {
   loading.value = true;
   try {
@@ -90,44 +95,23 @@ const loadArticles = async () => {
   }
 };
 
-// Navigasi ke halaman buat (create.vue)
-const goToCreate = () => {
-  router.push('/admin/articles/create');
-};
+const goToCreate = () => router.push('/admin/articles/create');
+const goToEdit = (id: string) => router.push(`/admin/articles/${id}`);
 
-// Navigasi ke halaman edit ([id].vue)
-const goToEdit = (id: string) => {
-  router.push(`/admin/articles/${id}`);
-};
-
-// Fungsi Hapus
 const handleDelete = async (row: any) => {
   try {
-    await ElMessageBox.confirm(`Hapus berita "${row.title}"?`, 'Peringatan', {
-      confirmButtonText: 'Hapus',
-      cancelButtonText: 'Batal',
-      type: 'warning'
-    });
-    
+    await ElMessageBox.confirm(`Hapus berita "${row.title}"?`, 'Peringatan', { type: 'warning' });
     await apiFetch(`/articles/${row.id}`, { method: 'DELETE' });
     ElMessage.success('Berita berhasil dihapus');
-    loadArticles(); // Refresh tabel
-  } catch (e) {
-    // User cancel delete
-  }
+    loadArticles();
+  } catch (e) {}
 };
 
-// Pantau kolom pencarian
-watch(searchQuery, () => {
-  loadArticles();
-});
-
+watch(searchQuery, () => loadArticles());
 onMounted(loadArticles);
 </script>
 
 <style scoped>
 @reference "tailwindcss";
-.glass-panel {
-  @apply rounded-[1.5rem] border border-slate-200 bg-white shadow-sm;
-}
+.glass-panel { @apply rounded-[1.5rem] border border-slate-200 bg-white shadow-sm; }
 </style>

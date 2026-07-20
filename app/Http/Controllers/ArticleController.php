@@ -12,34 +12,32 @@ class ArticleController extends Controller
 {
     use ManagesAttachments;
 
-    /**
-     * Tampil Daftar Berita
-     */
-public function index(Request $request): JsonResponse
-{
-    // Kita suruh Laravel mengambil data artikel SEKALIGUS gambarnya
-    $query = Article::query()->with(['thumbnail', 'author']);
-    
-    if ($request->filled('search')) {
-        $query->where('title', 'ILIKE', "%{$request->search}%");
+    public function index(Request $request): JsonResponse
+    {
+        $query = Article::query()->with(['thumbnail', 'author']);
+        
+        if ($request->filled('search')) {
+            $query->where('title', 'ILIKE', "%{$request->search}%");
+        }
+        
+        return response()->json($query->latest()->get());
     }
-    
-    return response()->json($query->latest()->get());
-}
-    /**
-     * Simpan Berita Baru
-     */
+
     public function store(Request $request): JsonResponse
     {
         $request->validate([
             'title' => 'required|string|max:255',
             'content' => 'required',
+            'status' => 'required|in:draft,published',
+            'excerpt' => 'nullable|string|max:200',
         ]);
 
         $article = Article::create([
             'title' => $request->title,
             'slug' => Str::slug($request->title),
             'content' => $request->content,
+            'excerpt' => $request->excerpt,
+            'status' => $request->status,
             'user_id' => auth()->id(), 
             'thumbnail_id' => $request->thumbnail_id,
         ]);
@@ -47,38 +45,31 @@ public function index(Request $request): JsonResponse
         return response()->json($article->load('thumbnail'), 201);
     }
 
-    /**
-     * Ambil Detail Satu Berita (PENTING untuk fitur Edit)
-     */
     public function show(Article $article): JsonResponse
     {
-        // Mengambil satu data berita beserta gambarnya untuk ditampilkan di form edit
         return response()->json($article->load(['thumbnail', 'author']));
     }
 
-    /**
-     * Update Berita yang Sudah Ada
-     */
     public function update(Request $request, Article $article): JsonResponse
     {
         $request->validate([
             'title' => 'required|string|max:255',
             'content' => 'required',
+            'status' => 'required|in:draft,published',
         ]);
 
         $article->update([
             'title' => $request->title,
             'slug' => Str::slug($request->title),
             'content' => $request->content,
-            'thumbnail_id' => $request->thumbnail_id, // Update gambar jika ada perubahan
+            'excerpt' => $request->excerpt,
+            'status' => $request->status,
+            'thumbnail_id' => $request->thumbnail_id,
         ]);
 
         return response()->json($article->load('thumbnail'));
     }
 
-    /**
-     * Hapus Berita
-     */
     public function destroy(Article $article): JsonResponse
     {
         $article->delete();

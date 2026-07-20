@@ -4,18 +4,23 @@ namespace App\Http\Controllers;
 
 use App\Enums\Role;
 use App\Models\User;
+use App\Models\Customer;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 class UserManagementController extends Controller
 {
+    /**
+     * Tampil Daftar Pengguna dengan Filter
+     */
     public function index(Request $request): JsonResponse
     {
-        // PENTING: Mengambil data user beserta detail tipe pelanggannya
         $query = User::with('customer');
 
+        // Filter Pencarian (Nama/Email)
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
@@ -24,10 +29,26 @@ class UserManagementController extends Controller
             });
         }
 
-        $users = $query->latest()->get();
-        return response()->json($users);
+        // Filter Tipe Akun (jemaat, penginjil, gereja, sekolah)
+        if ($request->filled('type')) {
+            $query->whereHas('customer', function($q) use ($request) {
+                $q->where('type', $request->type);
+            });
+        }
+
+        // Filter Status (pending, approved, rejected, suspended)
+        if ($request->filled('status')) {
+            $query->whereHas('customer', function($q) use ($request) {
+                $q->where('status', $request->status);
+            });
+        }
+
+        return response()->json($query->latest()->get());
     }
 
+    /**
+     * Simpan User Baru (Manual oleh Admin)
+     */
     public function store(Request $request): JsonResponse
     {
         $data = $request->validate([
@@ -37,13 +58,29 @@ class UserManagementController extends Controller
             'role' => ['required', 'integer'],
         ]);
 
-        $data['password'] = Hash::make($data['password']);
-        $user = User::create($data);
-        return response()->json($user, 201);
+        return DB::transaction(function () use ($data) {
+            $data['password'] = Hash::make($data['password']);
+            $user = User::create($data);
+
+            // Jika yang dibuat adalah Pelanggan (Role 3), buatkan profil customer-nya juga
+            if ($data['role'] == 3) {
+                $user->customer()->create([
+                    'name' => $data['name'],
+                    'type' => 'jemaat', // Default admin create as jemaat
+                    'status' => 'approved'
+                ]);
+            }
+
+            return response()->json($user->load('customer'), 201);
+        });
     }
 
+    /**
+     * Update Data User
+     */
     public function update(Request $request, User $user_management): JsonResponse
     {
+        // Proteksi agar Admin Staff tidak bisa ubah data Owner
         if ($request->user()->role !== Role::Owner && $user_management->role === Role::Owner) {
             return response()->json(['message' => 'Dilarang mengubah data Pimpinan.'], 403);
         }
@@ -62,25 +99,74 @@ class UserManagementController extends Controller
         }
 
         $user_management->update($data);
-        return response()->json($user_management->fresh());
+
+        // Sinkronisasi nama di tabel customer jika ada
+        if ($user_management->customer) {
+            $user_management->customer->update(['name' => $data['name']]);
+        }
+
+        return response()->json($user_management->fresh()->load('customer'));
     }
 
-public function destroy(Request $request, User $user_management): JsonResponse
-{
-    // 1. Proteksi Pimpinan (Tetap ada)
-    if ($request->user()->role !== Role::Owner && $user_management->role === Role::Owner) {
-        return response()->json(['message' => 'Anda dilarang menghapus data Pimpinan.'], 403);
+    /**
+     * Hapus User & Data Pelanggannya
+     */
+    public function destroy(Request $request, User $user_management): JsonResponse
+    {
+        if ($request->user()->role !== Role::Owner && $user_management->role === Role::Owner) {
+            return response()->json(['message' => 'Dilarang menghapus data Pimpinan.'], 403);
+        }
+
+        return DB::transaction(function () use ($user_management) {
+            if ($user_management->customer) {
+                $user_management->customer->delete();
+            }
+            $user_management->delete();
+            return response()->json(['status' => 'deleted']);
+        });
     }
 
-    // 2. LOGIKA SAKTI: Hapus data pelanggan yang nyangkut ke user ini
-    // Kita cek dulu, apakah user ini punya data di tabel customers?
-    if ($user_management->customer) {
-        $user_management->customer->delete(); // Hapus buntutnya (Customer)
+    /**
+     * FUNGSI KHUSUS: SETUJUI PL
+     */
+    public function approve($id): JsonResponse
+    {
+        $customer = Customer::findOrFail($id);
+        $customer->update([
+            'status' => 'approved', 
+            'rejection_reason' => null
+        ]);
+        return response()->json(['message' => 'Akun PL berhasil disetujui.']);
     }
 
-    // 3. Baru hapus akun loginnya
-    $user_management->delete(); // Hapus kepalanya (User)
+    /**
+     * FUNGSI KHUSUS: TOLAK PL (Turun ke Jemaat Umum)
+     */
+    public function reject(Request $request, $id): JsonResponse
+    {
+        $request->validate(['reason' => 'required|string']);
+        $customer = Customer::findOrFail($id);
+        
+        $customer->update([
+            'status' => 'rejected',
+            'rejection_reason' => $request->reason,
+            'type' => 'jemaat' // Otomatis jadi jemaat biasa agar tidak bisa akses harga PL
+        ]);
+        
+        return response()->json(['message' => 'Pendaftaran PL ditolak. Status user tetap aktif sebagai Jemaat Umum.']);
+    }
 
-    return response()->json(['status' => 'deleted']);
-}
+    /**
+     * FUNGSI KHUSUS: SUSPEND / AKTIFKAN AKUN
+     */
+    public function toggleStatus($id): JsonResponse
+    {
+        $customer = Customer::findOrFail($id);
+        $newStatus = ($customer->status === 'suspended') ? 'approved' : 'suspended';
+        $customer->update(['status' => $newStatus]);
+        
+        return response()->json([
+            'message' => $newStatus === 'suspended' ? 'Akun berhasil diblokir.' : 'Akun berhasil diaktifkan kembali.'
+        ]);
+    }
 }

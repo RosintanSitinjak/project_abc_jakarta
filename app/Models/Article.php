@@ -19,10 +19,11 @@ class Article extends Model
         'title',
         'slug',
         'content',
+        'excerpt',  // Baru
+        'status',   // Baru
         'thumbnail_id'
     ];
 
-    // Relasi agar tahu siapa penulisnya
     public function author()
     {
         return $this->belongsTo(User::class, 'user_id');
