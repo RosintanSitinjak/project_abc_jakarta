@@ -42,6 +42,7 @@ Route::post('/auth/register', [AuthController::class, 'register']);
 // =========================================================================
 Route::middleware('auth:sanctum')->group(function () {
     
+    Route::post('/orders/{id}/pay', [OrderController::class, 'pay']);
     Route::post('/auth/logout', [AuthController::class, 'logout']);
     Route::get('/user', fn (Request $request) => $request->user()?->load('customer'));
     Route::get('/dashboard', [DashboardController::class, 'index']);
@@ -62,9 +63,13 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // FITUR APPROVAL, REJECT, & SUSPEND (Tambahan Baru)
     // Saya arahkan semua ke UserManagementController agar rapi di satu tempat
+    Route::get('/customers/{id}/payment-history', [CustomerController::class, 'paymentHistory']);
+Route::patch('/customers/{id}/pay-debt', [CustomerController::class, 'payDebt']);
+    Route::patch('/customers/{id}/pay-debt', [CustomerController::class, 'payDebt']);
     Route::patch('/customers/{id}/approve', [UserManagementController::class, 'approve']);
     Route::patch('/customers/{id}/reject', [UserManagementController::class, 'reject']);
     Route::patch('/customers/{id}/toggle-status', [UserManagementController::class, 'toggleStatus']);
+    Route::patch('/books/{id}/restock', [BookController::class, 'restock']);
 });
 
 // --- System Check ---

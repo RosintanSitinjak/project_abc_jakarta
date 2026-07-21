@@ -8,7 +8,7 @@
           <p class="text-sm text-slate-500">Monitoring transaksi, verifikasi pembayaran, dan status logistik.</p>
         </div>
         <div class="flex items-center gap-3">
-          <el-input v-model="searchQuery" placeholder="Cari No. Invoice..." clearable class="w-full sm:w-64">
+          <el-input v-model="searchQuery" placeholder="Cari No. Invoice..." clearable class="w-full sm:w-64" @keyup.enter="loadData">
             <template #prefix><Icon icon="solar:magnifer-linear" /></template>
           </el-input>
           <el-button type="primary" color="#00a9c3" @click="openCreateDialog">
@@ -17,29 +17,21 @@
         </div>
       </div>
 
-      <!-- TABEL DAFTAR PESANAN UTAMA -->
+      <!-- TABEL UTAMA -->
       <div class="mt-6 overflow-x-auto">
         <el-table :data="orders" v-loading="loading" stripe border class="w-full rounded-xl overflow-hidden">
-          
-          <el-table-column label="Waktu Transaksi" width="160" align="center">
+          <el-table-column label="Waktu" width="140" align="center">
             <template #default="{ row }">
-              <div class="text-[11px] font-bold text-slate-500 uppercase leading-tight">
-                {{ formatDateTime(row.created_at) }}
-              </div>
+              <div class="text-[10px] font-bold text-slate-500 uppercase">{{ formatDateTime(row.created_at) }}</div>
             </template>
           </el-table-column>
-
           <el-table-column prop="order_number" label="No. Invoice" width="160" />
-          <el-table-column prop="customer.name" label="Pelanggan" min-width="180" />
-          
-          <el-table-column label="Asal" width="120" align="center">
-            <template #default="{ row }">
-              <el-tag size="small" :type="row.source === 'admin_manual' ? 'warning' : 'info'" effect="light" class="font-bold">
-                {{ row.source === 'admin_manual' ? 'WA / MANUAL' : 'WEBSITE' }}
-              </el-tag>
-            </template>
+          <el-table-column label="Pelanggan" min-width="180">
+             <template #default="{ row }">
+                <div class="font-bold text-slate-700">{{ row.customer?.name }}</div>
+                <div class="text-[9px] text-[#00a9c3] font-bold uppercase">{{ row.customer?.type }}</div>
+             </template>
           </el-table-column>
-
           <el-table-column label="Pembayaran" width="130" align="center">
             <template #default="{ row }">
               <el-tag :type="row.payment_status === 'paid' ? 'success' : 'danger'" effect="dark" size="small">
@@ -47,13 +39,11 @@
               </el-tag>
             </template>
           </el-table-column>
-
-          <el-table-column label="Total (Rp)" width="140">
+          <el-table-column label="Total" width="140">
             <template #default="{ row }">
               <span class="font-bold text-[#1B293C]">Rp {{ formatNumber(row.total_amount) }}</span>
             </template>
           </el-table-column>
-
           <el-table-column label="Logistik" width="130" align="center">
             <template #default="{ row }">
               <el-tag size="small" effect="plain" :type="row.shipping_status === 'delivered' ? 'success' : 'info'">
@@ -61,8 +51,7 @@
               </el-tag>
             </template>
           </el-table-column>
-
-          <el-table-column label="Aksi" width="120" align="center">
+          <el-table-column label="Aksi" width="100" align="center">
             <template #default="{ row }">
               <div class="flex justify-center gap-1">
                 <el-button circle size="small" type="primary" plain @click="openViewDetail(row)">
@@ -78,27 +67,24 @@
       </div>
     </section>
 
-    <!-- 1. DIALOG: INPUT PESANAN MANUAL -->
-    <el-dialog v-model="isCreateOpen" title="Formulir Input Pesanan (Assisted)" width="900px" top="5vh" destroy-on-close>
+    <!-- DIALOG 1: PESANAN MANUAL (ASSISTED) -->
+    <el-dialog v-model="isCreateOpen" title="Formulir Input Pesanan (Assisted)" width="900px" top="5vh" append-to-body>
       <el-form label-position="top">
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <el-form-item label="Waktu Transaksi" required>
             <el-date-picker v-model="createForm.date" type="datetime" format="YYYY-MM-DD HH:mm" value-format="YYYY-MM-DD HH:mm:ss" class="!w-full" />
           </el-form-item>
-
           <el-form-item label="Nama Pelanggan" required>
             <el-select v-model="createForm.customer_id" filterable placeholder="Pilih Pelanggan" class="w-full" @change="handleCustomerChange">
               <el-option v-for="c in customers" :key="c.id" :label="`${c.name} (${c.type.toUpperCase()})`" :value="c.id" />
             </el-select>
           </el-form-item>
-
           <el-form-item label="Metode Pembayaran">
             <el-select v-model="createForm.payment_method" class="w-full">
               <el-option label="Tunai (Cash)" value="cash" />
               <el-option label="Transfer Bank" value="transfer" />
               <el-option v-if="selectedCustomerType !== 'jemaat'" label="Kredit (Tempo 30 Hari)" value="kredit" />
             </el-select>
-            <p v-if="selectedCustomerType === 'penginjil'" class="text-[9px] text-orange-500 mt-1">* Limit PL: Rp 5.000.000</p>
           </el-form-item>
         </div>
 
@@ -112,34 +98,25 @@
                 </el-select>
               </template>
             </el-table-column>
-            <el-table-column label="Harga @ (Rp)" width="150" align="right">
-              <template #default="scope">
-                <span class="text-slate-600 font-bold">Rp {{ formatNumber(scope.row.price) }}</span>
-              </template>
+            <el-table-column label="Harga @ (Rp)" width="140" align="right">
+              <template #default="scope">Rp {{ formatNumber(scope.row.price) }}</template>
             </el-table-column>
             <el-table-column label="Qty" width="110">
               <template #default="scope">
-                <el-input-number v-model="scope.row.qty" :min="1" size="small" class="!w-full" />
+                <el-input-number v-model="scope.row.qty" :min="1" size="small" class="!w-full" @keyup.enter="submitManualOrder" />
               </template>
             </el-table-column>
-            <el-table-column label="Total" width="160" align="right">
+            <el-table-column label="Total" width="150" align="right">
               <template #default="scope">
-                <span class="font-black text-[#00A9C3]">Rp {{ formatNumber(scope.row.price * scope.row.qty) }}</span>
-              </template>
-            </el-table-column>
-            <el-table-column label="Batal" width="70" align="center">
-              <template #default="scope">
-                <el-button type="danger" plain circle @click="createForm.items.splice(scope.$index, 1)">
-                   <Icon icon="solar:close-circle-bold" />
-                </el-button>
+                <span class="font-bold text-[#00A9C3]">Rp {{ formatNumber(scope.row.price * scope.row.qty) }}</span>
               </template>
             </el-table-column>
           </el-table>
-          <el-button class="mt-3" type="primary" plain size="small" @click="addEmptyItem">+ Tambah Baris Buku</el-button>
+          <el-button class="mt-3" type="primary" plain size="small" @click="addEmptyItem">+ Tambah Baris</el-button>
         </div>
 
         <div class="mt-8 p-6 bg-slate-900 rounded-2xl text-right">
-          <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Total Bayar Akhir</p>
+          <p class="text-[10px] text-slate-400 font-bold uppercase">Total Bayar Akhir</p>
           <p class="text-4xl font-black text-[#00A9C3]">Rp {{ formatNumber(calculatedTotal) }}</p>
         </div>
       </el-form>
@@ -149,37 +126,81 @@
       </template>
     </el-dialog>
 
-    <!-- 2. DIALOG: DETAIL & VERIFIKASI (DENGAN LOGIKA PENGAMAN) -->
-    <el-dialog v-model="isDetailOpen" title="Verifikasi & Update Status" width="500px">
-      <div v-if="selectedOrder" class="space-y-5">
-        <div class="bg-[#1B293C] p-5 rounded-2xl text-white shadow-xl">
-          <p class="text-[10px] uppercase font-bold opacity-50">No. Invoice</p>
-          <p class="text-lg font-black tracking-tight mb-3">{{ selectedOrder.order_number }}</p>
-          <div class="pt-3 border-t border-white/10 flex justify-between items-center">
-            <span class="text-sm font-medium">{{ selectedOrder.customer?.name }}</span>
-            <span class="text-xl font-black">Rp {{ formatNumber(selectedOrder.total_amount) }}</span>
+    <!-- DIALOG 2: DETAIL, VERIFIKASI & UNGGAH BUKTI -->
+    <el-dialog v-model="isDetailOpen" title="Detail & Verifikasi Pesanan" width="750px" top="5vh" append-to-body>
+      <div v-if="selectedOrder" class="space-y-6">
+        <div class="bg-[#1B293C] p-5 rounded-2xl text-white shadow-lg flex justify-between items-center">
+          <div>
+            <p class="text-[10px] uppercase font-bold opacity-50">No. Invoice</p>
+            <p class="text-lg font-black tracking-tight">{{ selectedOrder.order_number }}</p>
+          </div>
+          <div class="text-right">
+            <p class="text-sm font-medium">{{ selectedOrder.customer?.name }}</p>
+            <p class="text-2xl font-black text-[#00A9C3]">Rp {{ formatNumber(selectedOrder.total_amount) }}</p>
           </div>
         </div>
 
-        <div class="grid grid-cols-2 gap-4">
-          <el-form-item label="Status Pembayaran">
-            <el-select v-model="selectedOrder.payment_status" class="w-full">
-              <el-option label="Belum Lunas" value="unpaid" />
-              <el-option label="Lunas" value="paid" />
-            </el-select>
-          </el-form-item>
-          <el-form-item label="Status Logistik">
-            <el-select v-model="selectedOrder.shipping_status" class="w-full">
-              <el-option label="Pending" value="pending" />
-              <el-option label="Diproses" value="processing" />
-              <el-option label="Dikirim" value="shipping" />
-              <el-option label="Selesai" value="delivered" />
-            </el-select>
-          </el-form-item>
+        <!-- Tabel Detail Barang -->
+        <div class="border rounded-xl p-4 bg-slate-50/50">
+          <p class="text-[11px] font-bold text-slate-400 uppercase mb-3">Daftar Buku Dipesan</p>
+          <el-table :data="selectedOrder.items" border size="small" class="rounded-lg">
+            <el-table-column label="Judul Buku">
+              <template #default="{ row }">{{ row.book?.title || 'Data buku tidak ditemukan' }}</template>
+            </el-table-column>
+            <el-table-column prop="qty" label="Qty" width="70" align="center" />
+            <el-table-column label="Subtotal" width="130" align="right">
+              <template #default="{ row }">Rp {{ formatNumber(row.price_at_purchase * row.qty) }}</template>
+            </el-table-column>
+          </el-table>
         </div>
 
-        <el-button type="primary" color="#00A9C3" class="w-full !h-12 font-bold" :loading="loadingUpdate" @click="confirmUpdateStatus">
-          Simpan Perubahan
+        <!-- Bukti Transfer + FITUR UNGGAH MANUAl -->
+        <div v-if="selectedOrder.payment_method !== 'kredit'" class="border rounded-xl p-4">
+           <p class="text-[11px] font-bold text-slate-400 uppercase mb-2">Bukti Pembayaran</p>
+           <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
+              <div class="flex justify-center bg-white p-2 rounded-lg border h-40">
+                 <el-image v-if="selectedOrder.payment_proof" :src="selectedOrder.payment_proof" :preview-src-list="[selectedOrder.payment_proof]" class="h-full rounded" fit="contain" />
+                 <div v-else class="flex items-center text-slate-300 italic text-xs">Belum ada bukti diunggah</div>
+              </div>
+              <el-upload action="#" :auto-upload="false" :show-file-list="false" :on-change="handleUploadProof">
+                <div class="p-5 border-2 border-dashed border-slate-200 rounded-lg text-center cursor-pointer hover:border-[#00A9C3]">
+                  <Icon icon="solar:upload-minimalistic-bold" class="text-2xl text-[#00A9C3] mx-auto" />
+                  <p class="text-[10px] font-bold mt-2 uppercase text-slate-500">Klik Unggah Bukti Baru</p>
+                </div>
+              </el-upload>
+           </div>
+        </div>
+
+        <!-- Form Update logistics -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div class="space-y-4">
+            <el-form-item label="Status Pembayaran">
+              <el-select v-model="selectedOrder.payment_status" class="w-full">
+                <el-option label="Belum Lunas" value="unpaid" />
+                <el-option label="Lunas" value="paid" />
+              </el-select>
+            </el-form-item>
+            <el-form-item label="Status Logistik">
+              <el-select v-model="selectedOrder.shipping_status" class="w-full">
+                <el-option label="Pending" value="pending" />
+                <el-option label="Proses Packing" value="processing" />
+                <el-option label="Telah Dikirim" value="shipping" />
+                <el-option label="Barang Diterima" value="delivered" />
+              </el-select>
+            </el-form-item>
+          </div>
+          <div class="space-y-4">
+            <el-form-item label="Nama Kurir">
+              <el-input v-model="selectedOrder.courier_name" placeholder="Misal: J&T, Sicepat" />
+            </el-form-item>
+            <el-form-item label="Nomor Resi">
+              <el-input v-model="selectedOrder.tracking_number" placeholder="Input resi" @keyup.enter="confirmUpdateStatus" />
+            </el-form-item>
+          </div>
+        </div>
+
+        <el-button type="primary" color="#00A9C3" class="w-full !h-12 font-bold shadow-lg" :loading="loadingUpdate" @click="confirmUpdateStatus">
+          Simpan & Perbarui Transaksi
         </el-button>
       </div>
     </el-dialog>
@@ -193,7 +214,7 @@ import { onMounted, reactive, ref, computed, watch } from 'vue';
 import AdminShell from '~/components/Admin/Shell.vue';
 import { useApi } from '~/composables/useApi';
 
-const { apiFetch, unwrap } = useApi();
+const { apiFetch, uploadAttachment } = useApi();
 const orders = ref([]);
 const customers = ref([]);
 const books = ref([]);
@@ -201,20 +222,20 @@ const loading = ref(false);
 const loadingSubmit = ref(false);
 const loadingUpdate = ref(false);
 const searchQuery = ref('');
-
 const isCreateOpen = ref(false);
 const isDetailOpen = ref(false);
 const selectedOrder = ref(null);
+const paymentProofId = ref(null); // Menampung ID Lampiran Baru
+
+const formatNumber = (val: number) => new Intl.NumberFormat('id-ID').format(val || 0);
+const formatDateTime = (dateStr: string) => {
+  return new Date(dateStr).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+};
 
 const createForm = reactive({
   date: '', customer_id: '', payment_method: 'cash',
   items: [{ book_id: '', qty: 1, price: 0 }]
 });
-
-const formatNumber = (val: number) => new Intl.NumberFormat('id-ID').format(val);
-const formatDateTime = (dateStr: string) => {
-  return new Date(dateStr).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
-};
 
 const selectedCustomerType = computed(() => {
   const c = customers.value.find(c => c.id === createForm.customer_id);
@@ -241,8 +262,8 @@ const loadData = async () => {
 const openCreateDialog = () => {
   const now = new Date();
   const offset = now.getTimezoneOffset() * 60000;
-  const localISOTime = (new Date(now - offset)).toISOString().slice(0, 19).replace('T', ' ');
-  Object.assign(createForm, { date: localISOTime, customer_id: '', payment_method: 'cash', items: [{ book_id: '', qty: 1, price: 0 }] });
+  const localTime = (new Date(now - offset)).toISOString().slice(0, 19).replace('T', ' ');
+  Object.assign(createForm, { date: localTime, customer_id: '', payment_method: 'cash', items: [{ book_id: '', qty: 1, price: 0 }] });
   isCreateOpen.value = true;
 };
 
@@ -251,14 +272,8 @@ const addEmptyItem = () => createForm.items.push({ book_id: '', qty: 1, price: 0
 const updateItemPrice = (idx: number) => {
   const book = books.value.find(b => b.id === createForm.items[idx].book_id);
   const cust = customers.value.find(c => c.id === createForm.customer_id);
-  
   if (book && cust) {
-    // REVISI: Hanya Penginjil yang dapat harga member.
-    if (cust.type === 'penginjil') {
-      createForm.items[idx].price = book.member_price || book.price;
-    } else {
-      createForm.items[idx].price = book.price;
-    }
+    createForm.items[idx].price = (cust.type === 'penginjil') ? (book.member_price || book.price) : book.price;
   }
 };
 
@@ -268,37 +283,52 @@ const submitManualOrder = async () => {
   if (!createForm.customer_id || createForm.items.some(i => !i.book_id)) return ElMessage.warning('Lengkapi data!');
   loadingSubmit.value = true;
   try {
-    await apiFetch('/orders', { method: 'POST', body: { ...createForm, total_amount: calculatedTotal.value, source: 'admin_manual' } });
-    ElMessage.success('Pesanan Berhasil Disimpan');
+    await apiFetch('/orders', { method: 'POST', body: { ...createForm, total_amount: calculatedTotal.value } });
+    ElMessage.success('Berhasil disimpan');
     isCreateOpen.value = false;
     loadData();
-  } catch (e) { ElMessage.error('Gagal simpan pesanan. Cek stok.'); }
+  } catch (e) { ElMessage.error('Gagal. Cek stok gudang!'); }
   finally { loadingSubmit.value = false; }
 };
 
 const openViewDetail = (row: any) => {
   selectedOrder.value = JSON.parse(JSON.stringify(row));
+  paymentProofId.value = null; // Reset ID unggahan saat buka detail
   isDetailOpen.value = true;
+};
+
+const handleUploadProof = async (file: any) => {
+  if (!file.raw) return;
+  try {
+    ElMessage.info('Sedang mengunggah bukti...');
+    const res = await uploadAttachment(file.raw, { attachmentableType: 'App\\Models\\Order', type: 'payment_proof' });
+    paymentProofId.value = res.id;
+    selectedOrder.value.payment_proof = res.url; // Update preview lokal
+    ElMessage.success('Bukti berhasil diunggah!');
+  } catch (e) { ElMessage.error('Gagal unggah bukti'); }
 };
 
 const confirmUpdateStatus = async () => {
   if (!selectedOrder.value) return;
 
-  const isDirectPay = ['cash', 'transfer'].includes(selectedOrder.value.payment_method);
+  const isJemaat = selectedOrder.value.customer?.type === 'jemaat';
   const isNotPaid = selectedOrder.value.payment_status === 'unpaid';
   const isTryingToShip = ['processing', 'shipping', 'delivered'].includes(selectedOrder.value.shipping_status);
 
-  if (isDirectPay && isNotPaid && isTryingToShip) {
-    return ElMessage({ message: 'Peringatan: Pesanan Tunai/Transfer harus LUNAS sebelum diproses!', type: 'error', duration: 5000 });
+  if (isJemaat && isNotPaid && isTryingToShip) {
+    return ElMessageBox.alert('Pelanggan Jemaat wajib melunasi pembayaran sebelum dikirim.', 'Blokir Logistik', { type: 'error' });
   }
 
   loadingUpdate.value = true;
   try {
     await apiFetch(`/orders/${selectedOrder.value.id}`, {
       method: 'PUT',
-      body: { payment_status: selectedOrder.value.payment_status, shipping_status: selectedOrder.value.shipping_status }
+      body: { 
+        ...selectedOrder.value,
+        payment_proof_id: paymentProofId.value 
+      }
     });
-    ElMessage.success('Status Diperbarui');
+    ElMessage.success('Status & Data Berhasil Diperbarui');
     isDetailOpen.value = false;
     loadData();
   } catch (e) { ElMessage.error('Gagal update status'); }
@@ -314,6 +344,11 @@ const handleDelete = async (row: any) => {
   } catch (e) {}
 };
 
-watch(searchQuery, () => loadData());
+watch(searchQuery, (v) => { if(v==='') loadData(); });
 onMounted(loadData);
 </script>
+
+<style scoped>
+@reference "tailwindcss";
+.glass-panel { @apply rounded-[1.5rem] border border-slate-200 bg-white shadow-sm; }
+</style>

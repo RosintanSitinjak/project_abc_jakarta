@@ -157,18 +157,26 @@ const logout = async () => {
   try { await apiFetch("/auth/logout", { method: "POST" }); } finally { authUser.value = null; router.push("/login"); }
 };
 
-// Navigation
+// Navigation (URUTAN TERBARU & MENU PIUTANG)
 const isActiveRoute = (path: string) => route.path === path;
 const navItems = computed(() => {
   const items = [
     { label: "Dashboard", icon: "solar:widget-2-linear", to: "/admin/dashboard" },
+    
+    // Kelompok Master Data
     { label: "Kategori", icon: "solar:folder-2-linear", to: "/admin/categories" },
-    { label: "Gereja & Jemaat", icon: "solar:users-group-rounded-linear", to: "/admin/customers" },
     { label: "Katalog Buku", icon: "solar:book-linear", to: "/admin/books" },
+    { label: "Gereja & Jemaat", icon: "solar:users-group-rounded-linear", to: "/admin/customers" },
+    
+    // Kelompok Operasional & Keuangan
     { label: "Pesanan Masuk", icon: "solar:mailbox-linear", to: "/admin/orders" },
+    { label: "Buku Piutang", icon: "solar:bill-list-linear", to: "/admin/receivables" },
+    
+    // Kelompok Konten
     { label: "Literasi/Berita", icon: "solar:document-text-linear", to: "/admin/articles" },
   ];
   
+  // Manajemen User di taruh paling bawah (Khusus Admin/Owner)
   if (authUser.value?.role === Role.Owner || authUser.value?.role === Role.Admin) {
     items.push({ label: "Manajemen User", icon: "solar:user-id-linear", to: "/admin/users" });
   }

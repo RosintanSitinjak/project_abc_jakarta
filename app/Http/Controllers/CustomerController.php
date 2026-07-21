@@ -9,6 +9,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 class CustomerController extends Controller
@@ -16,19 +17,9 @@ class CustomerController extends Controller
     public function index(Request $request): JsonResponse
     {
         $query = Customer::query();
-
-        if ($request->filled('search')) {
-            $query->where('name', 'ILIKE', "%{$request->search}%");
-        }
-
-        if ($request->filled('type')) {
-            $query->where('type', $request->type);
-        }
-
-        if ($request->filled('status')) {
-            $query->where('status', $request->status);
-        }
-
+        if ($request->filled('search')) $query->where('name', 'ILIKE', "%{$request->search}%");
+        if ($request->filled('type')) $query->where('type', $request->type);
+        if ($request->filled('status')) $query->where('status', $request->status);
         return response()->json($query->latest()->get());
     }
 
@@ -37,8 +28,6 @@ class CustomerController extends Controller
         $request->validate([
             'name' => 'required|string|max:255',
             'type' => 'required|in:jemaat,gereja,sekolah,penginjil',
-            'phone' => 'nullable|string',
-            'credit_limit' => 'nullable|integer',
         ]);
 
         $limit = $this->calculateValidatedLimit($request->type, $request->credit_limit);
@@ -68,14 +57,7 @@ class CustomerController extends Controller
 
     public function update(Request $request, Customer $customer): JsonResponse
     {
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'type' => 'required|in:jemaat,gereja,sekolah,penginjil',
-            'credit_limit' => 'nullable|integer',
-        ]);
-
         $limit = $this->calculateValidatedLimit($request->type, $request->credit_limit);
-
         $customer->update([
             'name'         => $request->name,
             'type'         => $request->type,
@@ -84,8 +66,60 @@ class CustomerController extends Controller
             'phone'        => $request->phone,
             'credit_limit' => $limit,
         ]);
-
         return response()->json($customer);
+    }
+
+    /**
+     * MENCATAT SETORAN CICILAN + RIWAYAT
+     */
+    public function payDebt(Request $request, $id): JsonResponse
+    {
+        $request->validate([
+            'amount' => 'required|integer|min:1',
+            'payment_method' => 'required|string',
+            'attachment_id' => 'nullable|exists:attachments,id',
+        ]);
+
+        $customer = Customer::findOrFail($id);
+
+        return DB::transaction(function () use ($customer, $request) {
+            // 1. Simpan ke Riwayat
+            DB::table('debt_payments')->insert([
+                'id' => Str::uuid(),
+                'customer_id' => $customer->id,
+                'amount' => $request->amount,
+                'payment_method' => $request->payment_method,
+                'attachment_id' => $request->attachment_id,
+                'created_at' => now(),
+            ]);
+
+            // 2. Potong Hutang Utama
+            $customer->decrement('current_debt', $request->amount);
+
+            return response()->json(['message' => 'Pembayaran piutang berhasil dicatat!']);
+        });
+    }
+
+    /**
+     * AMBIL DATA KARTU PIUTANG (HISTORY)
+     */
+    public function paymentHistory($id): JsonResponse
+    {
+        // Ambil riwayat dan gabungkan dengan URL foto bukti dari tabel attachments
+        $history = DB::table('debt_payments')
+            ->leftJoin('attachments', 'debt_payments.attachment_id', '=', 'attachments.id')
+            ->where('debt_payments.customer_id', $id)
+            ->select('debt_payments.*', 'attachments.path as image_path')
+            ->latest('debt_payments.created_at')
+            ->get();
+
+        // Transformasi path menjadi URL lengkap
+        $history->transform(function ($item) {
+            $item->proof_url = $item->image_path ? asset('storage/' . $item->image_path) : null;
+            return $item;
+        });
+
+        return response()->json($history);
     }
 
     public function approve($id): JsonResponse
@@ -100,17 +134,14 @@ class CustomerController extends Controller
         return DB::transaction(function () use ($customer) {
             $user = $customer->user;
             $customer->delete();
-            if ($user) { $user->delete(); }
+            if ($user) $user->delete();
             return response()->json(['status' => 'deleted']);
         });
     }
 
-    private function calculateValidatedLimit($type, $requestedLimit)
-    {
+    private function calculateValidatedLimit($type, $requestedLimit) {
         if ($type === 'jemaat') return 0;
-        if ($type === 'penginjil') {
-            return ($requestedLimit > 5000000) ? 5000000 : ($requestedLimit ?? 0);
-        }
+        if ($type === 'penginjil') return ($requestedLimit > 5000000) ? 5000000 : ($requestedLimit ?? 0);
         return $requestedLimit ?? 0;
     }
 }

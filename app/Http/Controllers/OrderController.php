@@ -10,58 +10,102 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Http\JsonResponse;
+use App\Http\Controllers\Concerns\ManagesAttachments;
 
 class OrderController extends Controller
 {
-    public function index()
-    {
-        return response()->json(Order::with('customer')->latest()->get());
+    use ManagesAttachments; // WAJIB ada untuk fitur unggah bukti
+
+        public function index(Request $request): JsonResponse
+{
+    // 1. Mulai Query dengan relasi yang dibutuhkan
+    $query = Order::with(['customer', 'items.book', 'thumbnail']);
+
+    // 2. Filter berdasarkan Metode Pembayaran (misal: 'kredit')
+    if ($request->filled('payment_method')) {
+        $query->where('payment_method', $request->payment_method);
     }
 
-    public function store(Request $request)
+    // 3. Filter berdasarkan Status Pembayaran (misal: 'unpaid')
+    if ($request->filled('payment_status')) {
+        $query->where('payment_status', $request->payment_status);
+    }
+
+    // 4. Filter berdasarkan Tipe Pelanggan (Gereja/PL/Jemaat) melalui tabel Customer
+    if ($request->filled('type')) {
+        $query->whereHas('customer', function($q) use ($request) {
+            $q->where('type', $request->type);
+        });
+    }
+
+    // 5. Pencarian berdasarkan Nomor Invoice atau Nama Pelanggan
+    if ($request->filled('search')) {
+        $search = $request->search;
+        $query->where(function($q) use ($search) {
+            $q->where('order_number', 'ILIKE', "%{$search}%")
+              ->orWhereHas('customer', function($q2) use ($search) {
+                  $q2->where('name', 'ILIKE', "%{$search}%");
+              });
+        });
+    }
+
+    $orders = $query->latest()->get();
+
+    // Transformasi URL Gambar (thumbnail)
+    $orders->transform(function ($order) {
+        $order->payment_proof = $order->thumbnail ? asset('storage/' . $order->thumbnail->path) : null;
+        return $order;
+    });
+
+    return response()->json($orders);
+}
+
+        // ... (bagian atas tetap sama)
+
+    public function store(Request $request): JsonResponse
     {
         $request->validate([
             'customer_id' => 'required|exists:customers,id',
             'payment_method' => 'required|in:cash,transfer,kredit',
             'items' => 'required|array|min:1',
+            'items.*.book_id' => 'required|exists:books,id',
+            'items.*.qty' => 'required|integer|min:1',
             'total_amount' => 'required'
         ]);
 
-        // --- VALIDASI STOK (SKRIPSI LOGIC: CEGAH MINUS) ---
         foreach ($request->items as $item) {
             $book = Book::find($item['book_id']);
             if (!$book || $book->stock < $item['qty']) {
-                return response()->json([
-                    'message' => "Maaf, stok buku '{$book->title}' tidak mencukupi. Sisa: {$book->stock}"
-                ], 422);
+                return response()->json(['message' => "Stok buku '{$book->title}' tidak mencukupi."], 422);
             }
         }
 
         return DB::transaction(function () use ($request) {
             $customer = Customer::find($request->customer_id);
 
-            // 1. Buat Header Order
+            // HEADER ORDER
             $order = Order::create([
                 'customer_id' => $request->customer_id,
                 'order_number' => 'INV-' . date('Ymd') . '-' . strtoupper(Str::random(4)),
                 'total_amount' => $request->total_amount,
+                
+                // --- FIX DI SINI: Isi sisa tagihan sama dengan total belanja di awal ---
+                'remaining_amount' => ($request->payment_method === 'kredit') ? $request->total_amount : 0,
+                
                 'payment_method' => $request->payment_method,
                 'payment_status' => $request->payment_method === 'kredit' ? 'unpaid' : 'paid',
                 'shipping_status' => 'pending',
-                'source' => $request->input('source', 'admin_manual'),
-                'created_at' => $request->date,
+                'source' => 'admin_manual',
+                'created_at' => $request->date ?? now(),
             ]);
 
-            // 2. Tambah Hutang Jika Kredit
             if ($order->payment_status === 'unpaid') {
                 $customer->increment('current_debt', $order->total_amount);
             }
 
-            // 3. Simpan Detail & Potong Stok
             foreach ($request->items as $item) {
                 $book = Book::find($item['book_id']);
-                
-                // Harga PL vs Umum
                 $finalPrice = ($customer->type === 'penginjil') ? ($book->member_price ?? $book->price) : $book->price;
 
                 $order->items()->create([
@@ -71,38 +115,103 @@ class OrderController extends Controller
                 ]);
 
                 $book->decrement('stock', $item['qty']);
-                
-                // Trigger Notifikasi ROP
-                if ($book->stock <= $book->rop_point) {
-                    Log::info("🚨 ROP ALERT: Buku '{$book->title}' sisa {$book->stock}.");
-                }
             }
 
-            return response()->json($order->load('customer'), 201);
+            return response()->json($order->load(['customer', 'items.book']), 201);
         });
     }
 
-    public function update(Request $request, $id)
-    {
-        $order = Order::findOrFail($id);
-        $oldStatus = $order->payment_status;
-        $order->update($request->only(['payment_status', 'shipping_status']));
+// ... (fungsi update, destroy, pay tetap sama dengan versi kamu)
 
-        // Kurangi hutang jika dari Belum Bayar menjadi Lunas
-        if ($oldStatus === 'unpaid' && $order->payment_status === 'paid') {
-            $order->customer->decrement('current_debt', $order->total_amount);
-        }
 
-        return response()->json($order);
+public function update(Request $request, $id): JsonResponse
+{
+    $order = Order::findOrFail($id);
+    $oldStatus = $order->payment_status;
+
+    // 1. Update data dasar (Status, Resi, Kurir)
+    $order->update($request->only([
+        'payment_status', 
+        'shipping_status', 
+        'tracking_number', 
+        'courier_name'
+    ]));
+
+    // 2. LOGIKA FIXING (INTI MASALAH):
+    if ($request->filled('payment_proof_id')) {
+        // Kita simpan ID-nya langsung ke kolom payment_proof_id di tabel orders
+        $order->payment_proof_id = $request->payment_proof_id;
+        $order->save(); // <--- WAJIB SAVE agar ID-nya tidak 'terbang'
+
+        // Jalankan perintah attachment untuk sinkronisasi relasi polimorfis
+        $this->setSingleAttachment($order, 'thumbnail', $request->payment_proof_id, 'payment_proof');
     }
 
-    public function destroy($id)
+    // 3. Sinkronisasi Piutang
+    if ($oldStatus === 'unpaid' && $order->payment_status === 'paid') {
+        $order->customer->decrement('current_debt', $order->total_amount);
+    }
+
+    // Load ulang semua relasi termasuk thumbnail agar frontend dapet data terbaru
+    return response()->json($order->load(['customer', 'items.book', 'thumbnail']));
+}
+
+
+    public function destroy($id): JsonResponse
     {
         $order = Order::findOrFail($id);
-        if ($order->payment_status === 'unpaid') {
-            $order->customer->decrement('current_debt', $order->total_amount);
-        }
-        $order->delete();
-        return response()->json(['status' => 'deleted']);
+        return DB::transaction(function () use ($order) {
+            if ($order->payment_status === 'unpaid') {
+                $order->customer->decrement('current_debt', $order->total_amount);
+            }
+            $order->delete();
+            return response()->json(['status' => 'deleted']);
+        });
     }
+
+    /**
+ * FUNGSI: Bayar Cicilan Per Invoice
+ */
+public function pay(Request $request, $id): JsonResponse
+{
+    $request->validate([
+        'amount' => 'required|integer|min:1',
+        'method' => 'required|string'
+    ]);
+
+    $order = Order::with('customer')->findOrFail($id);
+
+    // Proteksi: Jangan sampai bayar melebihi sisa tagihan
+    if ($request->amount > $order->remaining_amount) {
+        return response()->json(['message' => 'Jumlah bayar melebihi sisa tagihan!'], 422);
+    }
+
+    return DB::transaction(function () use ($order, $request) {
+        // 1. Kurangi Sisa Tagihan di Invoice ini
+        $order->decrement('remaining_amount', $request->amount);
+
+        // 2. Kurangi Saldo Hutang Global di tabel Pelanggan
+        $order->customer->decrement('current_debt', $request->amount);
+
+        // 3. Jika Sisa Tagihan jadi 0, otomatis set status jadi LUNAS
+        if ($order->remaining_amount <= 0) {
+            $order->update(['payment_status' => 'paid']);
+        }
+
+        // 4. Catat sejarah di tabel debt_payments (agar terekam di Kartu Piutang)
+        DB::table('debt_payments')->insert([
+            'id' => \Illuminate\Support\Str::uuid(),
+            'customer_id' => $order->customer_id,
+            'amount' => $request->amount,
+            'payment_method' => $request->method,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        return response()->json([
+            'message' => 'Pembayaran cicilan berhasil dicatat',
+            'order' => $order->fresh()
+        ]);
+    });
+}
 }

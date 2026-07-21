@@ -20,14 +20,16 @@ class Order extends Model
         'customer_id',
         'order_number',
         'total_amount',
+        'remaining_amount',
         'payment_method',
         'payment_status',
-        'payment_proof',
+        'payment_proof',    // Simpan URL bukti (opsional)
+        'payment_proof_id', // PENTING: Tambahkan ini untuk relasi gambar
         'due_date',
         'shipping_status',
         'tracking_number',
         'courier_name',
-        'source', // Penting untuk membedakan pesanan Web vs Manual
+        'source',
     ];
 
     // Relasi ke Pelanggan
@@ -36,14 +38,18 @@ class Order extends Model
         return $this->belongsTo(Customer::class);
     }
 
-    // Relasi ke detail barang yang dibeli
-    // public function items(): HasMany
-    // {
-    //     return $this->hasMany(OrderItem::class);
-    // }
+    // Relasi ke detail barang (Buku apa saja yang dibeli)
+    public function items(): HasMany
+    {
+        return $this->hasMany(OrderItem::class);
+    }
 
-    public function items(): \Illuminate\Database\Eloquent\Relations\HasMany
-{
-    return $this->hasMany(OrderItem::class);
-}
+    /**
+     * RELASI KE GAMBAR BUKTI PEMBAYARAN
+     * Menghubungkan ke tabel attachments
+     */
+    public function thumbnail(): BelongsTo
+    {
+        return $this->belongsTo(Attachment::class, 'payment_proof_id');
+    }
 }
