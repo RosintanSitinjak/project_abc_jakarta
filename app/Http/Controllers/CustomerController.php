@@ -69,9 +69,6 @@ class CustomerController extends Controller
         return response()->json($customer);
     }
 
-    /**
-     * MENCATAT SETORAN CICILAN + RIWAYAT
-     */
     public function payDebt(Request $request, $id): JsonResponse
     {
         $request->validate([
@@ -83,7 +80,6 @@ class CustomerController extends Controller
         $customer = Customer::findOrFail($id);
 
         return DB::transaction(function () use ($customer, $request) {
-            // 1. Simpan ke Riwayat
             DB::table('debt_payments')->insert([
                 'id' => Str::uuid(),
                 'customer_id' => $customer->id,
@@ -92,20 +88,13 @@ class CustomerController extends Controller
                 'attachment_id' => $request->attachment_id,
                 'created_at' => now(),
             ]);
-
-            // 2. Potong Hutang Utama
             $customer->decrement('current_debt', $request->amount);
-
             return response()->json(['message' => 'Pembayaran piutang berhasil dicatat!']);
         });
     }
 
-    /**
-     * AMBIL DATA KARTU PIUTANG (HISTORY)
-     */
     public function paymentHistory($id): JsonResponse
     {
-        // Ambil riwayat dan gabungkan dengan URL foto bukti dari tabel attachments
         $history = DB::table('debt_payments')
             ->leftJoin('attachments', 'debt_payments.attachment_id', '=', 'attachments.id')
             ->where('debt_payments.customer_id', $id)
@@ -113,7 +102,6 @@ class CustomerController extends Controller
             ->latest('debt_payments.created_at')
             ->get();
 
-        // Transformasi path menjadi URL lengkap
         $history->transform(function ($item) {
             $item->proof_url = $item->image_path ? asset('storage/' . $item->image_path) : null;
             return $item;
@@ -139,9 +127,20 @@ class CustomerController extends Controller
         });
     }
 
+    /**
+     * LOGIKA VALIDASI LIMIT KREDIT (REVISI FINAL)
+     */
     private function calculateValidatedLimit($type, $requestedLimit) {
+        // 1. Jemaat: Wajib 0 (Cash Only)
         if ($type === 'jemaat') return 0;
-        if ($type === 'penginjil') return ($requestedLimit > 5000000) ? 5000000 : ($requestedLimit ?? 0);
-        return $requestedLimit ?? 0;
+
+        // 2. PL: Maksimal 5.000.000 (Kebijakan ABC Jakarta)
+        if ($type === 'penginjil') {
+            return ($requestedLimit > 5000000) ? 5000000 : ($requestedLimit ?? 5000000);
+        }
+
+        // 3. Gereja / Sekolah: Bebas. 
+        // Jika Admin tidak isi (null), set angka 999 Juta sebagai tanda "Tanpa Batas"
+        return $requestedLimit ?? 999000000;
     }
 }

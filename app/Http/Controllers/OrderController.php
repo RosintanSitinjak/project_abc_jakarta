@@ -20,8 +20,14 @@ class OrderController extends Controller
         public function index(Request $request): JsonResponse
 {
     // 1. Mulai Query dengan relasi yang dibutuhkan
-    $query = Order::with(['customer', 'items.book', 'thumbnail']);
-
+ $query = Order::with([
+        'customer' => function($q) {
+            $q->withTrashed(); // <--- INI KUNCINYA: Ambil profil meski sudah dihapus
+        }, 
+        'items.book', 
+        'thumbnail'
+    ]);
+    
     // 2. Filter berdasarkan Metode Pembayaran (misal: 'kredit')
     if ($request->filled('payment_method')) {
         $query->where('payment_method', $request->payment_method);
