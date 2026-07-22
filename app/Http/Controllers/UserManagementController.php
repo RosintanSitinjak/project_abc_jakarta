@@ -13,8 +13,12 @@ use Illuminate\Validation\Rule;
 
 class UserManagementController extends Controller
 {
+    /**
+     * Tampil Daftar Pengguna (Lengkap dengan No. HP Customer)
+     */
     public function index(Request $request): JsonResponse
     {
+        // Pastikan load 'customer' agar data phone/tipe bisa muncul di tabel
         $query = User::with('customer');
 
         if ($request->filled('search')) {
@@ -36,6 +40,9 @@ class UserManagementController extends Controller
         return response()->json($query->latest()->get());
     }
 
+    /**
+     * Simpan User Baru (Manual oleh Admin)
+     */
     public function store(Request $request): JsonResponse
     {
         $data = $request->validate([
@@ -43,15 +50,19 @@ class UserManagementController extends Controller
             'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
             'role' => ['required', 'integer'],
-            // Validasi tambahan: Jika role = 3 (Pelanggan), maka customer_type wajib diisi
             'customer_type' => ['required_if:role,3', 'nullable', 'in:jemaat,penginjil,gereja,sekolah'],
+            'phone' => ['nullable', 'string'], // Tambahan untuk orang gaptek
         ]);
 
         return DB::transaction(function () use ($request, $data) {
-            $data['password'] = Hash::make($data['password']);
-            $user = User::create($data);
+            $user = User::create([
+                'name' => $data['name'],
+                'email' => $data['email'],
+                'password' => Hash::make($data['password']),
+                'role' => $data['role'],
+            ]);
 
-            // JIKA ROLE ADALAH PELANGGAN (3), BUATKAN PROFIL CUSTOMER NYA
+            // Jika role Pelanggan (3), buatkan profil otomatis
             if ($request->role == 3) {
                 $limit = 0;
                 if ($request->customer_type === 'penginjil') $limit = 5000000;
@@ -60,7 +71,8 @@ class UserManagementController extends Controller
                 $user->customer()->create([
                     'name' => $request->name,
                     'type' => $request->customer_type,
-                    'status' => 'approved', // Karena dibuat admin, otomatis aktif
+                    'status' => 'approved', 
+                    'phone' => $request->phone, // Simpan nomor WA
                     'credit_limit' => $limit,
                     'current_debt' => 0
                 ]);
@@ -70,6 +82,9 @@ class UserManagementController extends Controller
         });
     }
 
+    /**
+     * Update Data User & Profil Pelanggan
+     */
     public function update(Request $request, User $user_management): JsonResponse
     {
         if ($request->user()->role !== Role::Owner && $user_management->role === Role::Owner) {
@@ -82,6 +97,7 @@ class UserManagementController extends Controller
             'password' => ['nullable', 'string', 'min:8', 'confirmed'],
             'role' => ['required', 'integer'],
             'customer_type' => ['required_if:role,3', 'nullable', 'in:jemaat,penginjil,gereja,sekolah'],
+            'phone' => ['nullable', 'string'],
         ]);
 
         return DB::transaction(function () use ($request, $data, $user_management) {
@@ -93,11 +109,11 @@ class UserManagementController extends Controller
 
             $user_management->update($data);
 
-            // Sinkronisasi tipe di tabel customers jika dia pelanggan
             if ($user_management->customer) {
                 $user_management->customer->update([
                     'name' => $data['name'],
-                    'type' => $request->customer_type ?? $user_management->customer->type
+                    'type' => $request->customer_type ?? $user_management->customer->type,
+                    'phone' => $request->phone ?? $user_management->customer->phone,
                 ]);
             }
 

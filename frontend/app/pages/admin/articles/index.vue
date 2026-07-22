@@ -8,7 +8,7 @@
           <p class="text-sm text-slate-500">Kelola informasi buku terbaru dan pengumuman.</p>
         </div>
         <div class="flex items-center gap-3">
-          <el-input v-model="searchQuery" placeholder="Cari judul..." clearable class="w-full sm:w-64">
+          <el-input v-model="searchQuery" placeholder="Cari judul..." clearable class="w-full sm:w-64" @keyup.enter="loadArticles">
             <template #prefix><Icon icon="solar:magnifer-linear" /></template>
           </el-input>
           <el-button type="primary" color="#00A9C3" @click="goToCreate">
@@ -20,19 +20,27 @@
       <!-- TABEL DAFTAR BERITA -->
       <div class="mt-6 overflow-x-auto">
         <el-table :data="articles" v-loading="loading" stripe border class="w-full rounded-xl overflow-hidden">
-          <el-table-column label="Gambar" width="100" align="center">
+          
+          <!-- KOLOM GAMBAR (FIXED) -->
+          <el-table-column label="Gambar" width="120" align="center">
             <template #default="{ row }">
               <el-image 
-                v-if="row.thumbnail?.url" 
-                :src="row.thumbnail.url" 
-                class="h-10 w-16 rounded shadow-sm" 
+                v-if="row.image_url" 
+                :src="row.image_url" 
+                class="h-10 w-16 rounded shadow-sm border border-slate-100" 
                 fit="cover" 
-              />
+              >
+                <template #error>
+                  <div class="flex h-full w-full items-center justify-center bg-slate-50">
+                    <Icon icon="solar:gallery-bold" class="text-slate-200 text-xl" />
+                  </div>
+                </template>
+              </el-image>
               <Icon v-else icon="solar:gallery-linear" class="text-2xl text-slate-200" />
             </template>
           </el-table-column>
 
-          <el-table-column prop="title" label="Judul Berita" min-width="200" />
+          <el-table-column prop="title" label="Judul Berita" min-width="200" show-overflow-tooltip />
           
           <el-table-column label="Status" width="120" align="center">
             <template #default="{ row }">
@@ -107,7 +115,10 @@ const handleDelete = async (row: any) => {
   } catch (e) {}
 };
 
-watch(searchQuery, () => loadArticles());
+watch(searchQuery, (newVal) => {
+  if (newVal === '') loadArticles();
+});
+
 onMounted(loadArticles);
 </script>
 

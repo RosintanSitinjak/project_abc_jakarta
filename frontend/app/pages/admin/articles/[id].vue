@@ -14,7 +14,6 @@
           <el-input v-model="form.title" size="large" class="custom-input" />
         </el-form-item>
 
-        <!-- RINGKASAN / EXCERPT (BARU) -->
         <el-form-item label="Ringkasan Singkat (Excerpt)" required>
           <el-input 
             v-model="form.excerpt" 
@@ -42,17 +41,17 @@
               :limit="1"
               v-model:file-list="fileList"
               :on-change="handleImageChange"
+              :on-remove="handleImageRemove"
             >
               <Icon icon="solar:camera-add-linear" class="text-2xl" />
             </el-upload>
           </el-form-item>
 
-          <!-- STATUS (BARU) -->
           <el-form-item label="Status Publikasi" required>
             <div class="p-4 border border-slate-100 rounded-xl bg-slate-50/50">
               <el-radio-group v-model="form.status" class="flex flex-col gap-3">
-                <el-radio label="draft" size="large" border class="!ml-0 w-full bg-white">Draft</el-radio>
-                <el-radio label="published" size="large" border class="!ml-0 w-full bg-white text-[#00a9c3]">Published</el-radio>
+                <el-radio value="draft" size="large" border class="!ml-0 w-full bg-white">Draft</el-radio>
+                <el-radio value="published" size="large" border class="!ml-0 w-full bg-white text-[#00a9c3]">Published</el-radio>
               </el-radio-group>
             </div>
           </el-form-item>
@@ -85,9 +84,9 @@ const fileList = ref([]);
 
 const form = reactive({ 
   title: '', 
-  excerpt: '', // Baru
+  excerpt: '', 
   content: '', 
-  status: 'draft', // Baru
+  status: 'draft', 
   thumbnail_id: null 
 });
 
@@ -95,12 +94,14 @@ const loadArticle = async () => {
   try {
     const res: any = await apiFetch(`/articles/${route.params.id}`);
     form.title = res.title;
-    form.excerpt = res.excerpt || ''; // Load data baru
+    form.excerpt = res.excerpt || ''; 
     form.content = res.content;
-    form.status = res.status || 'draft'; // Load data baru
+    form.status = res.status || 'draft';
     form.thumbnail_id = res.thumbnail_id;
-    if (res.thumbnail) {
-        fileList.value = [{ name: res.thumbnail.name, url: res.thumbnail.url }];
+
+    // Perbaikan: Gunakan image_url dari backend untuk preview
+    if (res.image_url) {
+        fileList.value = [{ url: res.image_url }];
     }
   } catch (e) {
     ElMessage.error('Berita tidak ditemukan');
@@ -111,24 +112,36 @@ const loadArticle = async () => {
 };
 
 const handleImageChange = async (file: any) => {
+  if (!file.raw) return;
   try {
     const attachment = await uploadAttachment(file.raw, { attachmentableType: 'App\\Models\\Article', type: 'thumbnail' });
     form.thumbnail_id = attachment.id;
-    ElMessage.success('Gambar diperbarui');
-  } catch (e) { ElMessage.error('Gagal unggah'); }
+    ElMessage.success('Gambar berhasil diunggah');
+  } catch (e) { 
+    ElMessage.error('Gagal unggah'); 
+    fileList.value = [];
+  }
+};
+
+// Fungsi Baru: Menghapus ID thumbnail jika gambar di-remove di UI
+const handleImageRemove = () => {
+    form.thumbnail_id = null;
 };
 
 const updateArticle = async () => {
   if (!form.title || !form.content || !form.excerpt) {
-    return ElMessage.warning('Semua kolom wajib diisi!');
+    return ElMessage.warning('Judul, Ringkasan, dan Isi wajib diisi!');
   }
   busy.value = true;
   try {
-    await apiFetch(`/articles/${route.params.id}`, { method: 'PUT', body: form });
+    await apiFetch(`/articles/${route.params.id}`, { 
+      method: 'PUT', 
+      body: form 
+    });
     ElMessage.success('Berita berhasil diperbarui');
     router.push('/admin/articles');
   } catch (e) {
-    ElMessage.error('Gagal update');
+    ElMessage.error('Gagal memperbarui data. Cek koneksi server.');
   } finally {
     busy.value = false;
   }

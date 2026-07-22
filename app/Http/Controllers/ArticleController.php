@@ -20,7 +20,15 @@ class ArticleController extends Controller
             $query->where('title', 'ILIKE', "%{$request->search}%");
         }
         
-        return response()->json($query->latest()->get());
+        $articles = $query->latest()->get();
+
+        // Transformasi URL Gambar agar muncul di tabel utama
+        $articles->transform(function ($article) {
+            $article->image_url = $article->thumbnail ? asset('storage/' . $article->thumbnail->path) : null;
+            return $article;
+        });
+
+        return response()->json($articles);
     }
 
     public function store(Request $request): JsonResponse
@@ -34,7 +42,7 @@ class ArticleController extends Controller
 
         $article = Article::create([
             'title' => $request->title,
-            'slug' => Str::slug($request->title),
+            'slug' => Str::slug($request->title) . '-' . rand(100,999),
             'content' => $request->content,
             'excerpt' => $request->excerpt,
             'status' => $request->status,
@@ -47,7 +55,11 @@ class ArticleController extends Controller
 
     public function show(Article $article): JsonResponse
     {
-        return response()->json($article->load(['thumbnail', 'author']));
+        $article->load(['thumbnail', 'author']);
+        // Menambahkan URL gambar lengkap untuk preview form edit
+        $article->image_url = $article->thumbnail ? asset('storage/' . $article->thumbnail->path) : null;
+        
+        return response()->json($article);
     }
 
     public function update(Request $request, Article $article): JsonResponse
@@ -56,11 +68,12 @@ class ArticleController extends Controller
             'title' => 'required|string|max:255',
             'content' => 'required',
             'status' => 'required|in:draft,published',
+            'excerpt' => 'nullable|string|max:200',
         ]);
 
         $article->update([
             'title' => $request->title,
-            'slug' => Str::slug($request->title),
+            'slug' => Str::slug($request->title) . '-' . rand(100,999),
             'content' => $request->content,
             'excerpt' => $request->excerpt,
             'status' => $request->status,
