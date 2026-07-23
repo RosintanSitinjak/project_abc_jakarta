@@ -52,4 +52,12 @@ class Order extends Model
     {
         return $this->belongsTo(Attachment::class, 'payment_proof_id');
     }
+
+            // Tambahkan relasi ini di dalam class Order
+    public function payments(): HasMany
+    {
+        // Mengacu ke tabel debt_payments yang kita buat kemarin
+        return $this->hasMany(DebtPayment::class, 'customer_id', 'customer_id')
+                    ->where('attachment_id', null); // Atau sesuaikan logika filternya
+    }
 }
