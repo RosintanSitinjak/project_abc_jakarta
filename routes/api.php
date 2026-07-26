@@ -13,42 +13,34 @@ use App\Http\Controllers\OrderController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ArticleController;
 use App\Http\Controllers\PublicArticleController;
-use App\Http\Controllers\VisitorController;
-use App\Http\Controllers\AttachmentController;
+use App\Http\Controllers\RestockRequestController;
 
 // 1. RUTE PUBLIK
 Route::prefix('public')->group(function () {
     Route::get('books', [BookController::class, 'index']);
     Route::get('categories', [CategoryController::class, 'index']);
     Route::get('articles', [PublicArticleController::class, 'index']);
-    Route::get('articles/{slug}', [PublicArticleController::class, 'show']);
-    Route::post('visitor', [VisitorController::class, 'store']);
 });
 
-// 2. RUTE TERPROTEKSI
+// 2. RUTE LOGIN
+Route::post('/auth/login', [AuthController::class, 'login']);
+Route::post('/auth/register', [AuthController::class, 'register']); 
+
+// 3. RUTE TERPROTEKSI (Wajib Login)
 Route::middleware('auth:sanctum')->group(function () {
     
-    // Auth & Dashboard
-    Route::post('/auth/logout', [AuthController::class, 'logout']);
     Route::get('/user', fn (Request $request) => $request->user()?->load('customer'));
     Route::get('/dashboard', [DashboardController::class, 'index']);
 
-    // Modul Order & PDF
-    Route::get('/orders/export/monthly', [OrderController::class, 'exportMonthlyReport']);
-    Route::get('/orders/{id}/invoice', [OrderController::class, 'downloadInvoice']);
-    Route::post('/orders/{id}/pay', [OrderController::class, 'pay']);
-    Route::post('/orders/{id}/cancel', [OrderController::class, 'cancel']);
+    // --- RUTE RESTOCK (Taruh di atas apiResource agar prioritas) ---
+    Route::get('/restock-requests', [RestockRequestController::class, 'index']);
+    Route::post('/restock-requests', [RestockRequestController::class, 'store']);
+    Route::patch('/restock-requests/{id}/status', [RestockRequestController::class, 'updateStatus']);
+    Route::patch('/restock-requests/{id}/complete', [RestockRequestController::class, 'markAsCompleted']);
+
+    // --- MODUL MASTER & TRANSAKSI ---
     Route::apiResource('orders', OrderController::class);
-
-    // Modul Customer & History
-    Route::get('/customers/{id}/orders', [CustomerController::class, 'orderHistory']);
-    Route::get('/customers/{id}/payment-history', [CustomerController::class, 'paymentHistory']);
-    Route::patch('/customers/{id}/pay-debt', [CustomerController::class, 'payDebt']);
     Route::apiResource('customers', CustomerController::class);
-
-    // Modul Master Data
-    Route::get('books/export/pdf', [BookController::class, 'exportPdf']);
-    Route::patch('/books/{id}/restock', [BookController::class, 'restock']);
     Route::apiResource('books', BookController::class);
     Route::apiResource('categories', CategoryController::class);
     Route::apiResource('articles', ArticleController::class);
