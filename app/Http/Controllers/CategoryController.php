@@ -9,12 +9,8 @@ use Illuminate\Support\Str;
 
 class CategoryController extends Controller
 {
-    /**
-     * Tampil Daftar Kategori dengan Fitur Pencarian & Hitung Jumlah Buku
-     */
     public function index(Request $request): JsonResponse
     {
-        // withCount('books') akan menambahkan kolom virtual 'books_count' secara otomatis
         $query = Category::query()->withCount('books');
 
         if ($request->filled('search')) {
@@ -25,10 +21,11 @@ class CategoryController extends Controller
         return response()->json($query->latest()->get());
     }
 
-    public function store(Request $request): JsonResponse
+public function store(Request $request): JsonResponse
     {
         $request->validate([
-            'name' => 'required|string|max:255',
+            // Tambahkan 'unique' agar tidak ada kategori kembar
+            'name' => 'required|string|max:255|unique:categories,name',
             'description' => 'nullable|string'
         ]);
 
@@ -44,7 +41,8 @@ class CategoryController extends Controller
     public function update(Request $request, Category $category): JsonResponse
     {
         $request->validate([
-            'name' => 'required|string|max:255',
+            // Unik, kecuali untuk ID kategori yang sedang diedit ini
+            'name' => 'required|string|max:255|unique:categories,name,' . $category->id,
             'description' => 'nullable|string'
         ]);
 
@@ -56,11 +54,18 @@ class CategoryController extends Controller
 
         return response()->json($category);
     }
-
+    /**
+     * FUNGSI DESTROY DENGAN PROTEKSI (SAFETY GUARD)
+     */
     public function destroy(Category $category): JsonResponse
     {
-        // Karena ada relasi, di skripsi bisa dijelaskan: 
-        // Menggunakan SoftDeletes agar data histori buku tetap aman.
+        // CEK: Apakah masih ada buku di kategori ini?
+        if ($category->books()->count() > 0) {
+            return response()->json([
+                'message' => "Gagal menghapus! Kategori '{$category->name}' masih memiliki koleksi buku. Silakan pindahkan atau hapus buku terlebih dahulu."
+            ], 422); // Error 422 (Unprocessable Entity)
+        }
+
         $category->delete();
         return response()->json(['status' => 'deleted']);
     }

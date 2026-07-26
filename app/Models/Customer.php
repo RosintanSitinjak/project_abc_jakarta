@@ -23,6 +23,7 @@ class Customer extends Model
         'name',
         'type',
         'status', // 'pending', 'approved', 'rejected'
+        'rejection_reason',
         'address',
         'phone',
         'credit_limit',

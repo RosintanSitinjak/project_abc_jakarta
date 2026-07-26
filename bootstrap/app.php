@@ -10,44 +10,33 @@ return Application::configure(basePath: dirname(__DIR__))
         web: __DIR__.'/../routes/web.php',
         api: __DIR__.'/../routes/api.php',
         commands: __DIR__.'/../routes/console.php',
-        channels: __DIR__.'/../routes/channels.php',
         health: '/up',
     )
-    ->withMiddleware(function (Middleware $middleware) {
+    ->withMiddleware(function (Middleware $middleware): void {
         $middleware->trustProxies(at: '*');
         
-        // 1. Wajib untuk Nuxt + Sanctum
+        // Agar Nuxt & Laravel bisa bertukar data session/cookie
         $middleware->statefulApi();
-
-        // 2. Memaksa Session aktif di API (Agar Login tidak terlepas)
-        $middleware->group('api', [
-            \Illuminate\Session\Middleware\StartSession::class,
-            \Illuminate\View\Middleware\ShareErrorsFromSession::class,
-        ]);
 
         $middleware->alias([
             'role' => \App\Http\Middleware\RoleMiddleware::class,
         ]);
 
-        // 3. Solusi Ampuh: Paksa Laravel untuk TIDAK me-redirect ke rute 'login'
+        // SOLUSI KRUSIAL: Mengecualikan API dari CSRF 
+        // Agar fungsi Edit/Delete tidak "Forbidden" setelah Merge Windows/Mac
+        $middleware->validateCsrfTokens(except: [
+            'api/*',
+            'sanctum/csrf-cookie',
+        ]);
+
+        // SOLUSI: Mencegah redirect ke halaman 'login' (mencegah error 302/Route Login Not Found)
         $middleware->redirectGuestsTo(function (Request $request) {
             if ($request->is('api/*')) {
-                return null; // Laravel akan otomatis kirim status 401 (Unauthenticated)
+                return null; // Laravel akan kirim 401 Unauthorized (benar), bukan dilempar ke login
             }
-            return route('login');
+            return '/login'; 
         });
-
-        $middleware->validateCsrfTokens(except: [
-            'api/public/*',
-        ]);
     })
-    ->withExceptions(function (Exceptions $exceptions) {
-        // Menangani error jika user belum login di API
-        $exceptions->render(function (\Illuminate\Auth\AuthenticationException $e, $request) {
-            if ($request->is('api/*')) {
-                return response()->json([
-                    'message' => 'Sesi habis. Silakan login kembali.',
-                ], 401);
-            }
-        });
+    ->withExceptions(function (Exceptions $exceptions): void {
+        //
     })->create();

@@ -8,13 +8,17 @@ use Illuminate\Http\JsonResponse;
 
 class PublicArticleController extends Controller
 {
-    public function index(): JsonResponse
-    {
-        // PENTING: Harus ada .with('thumbnail') agar link gambar ikut terkirim ke Karla
-        $articles = Article::with(['thumbnail', 'author'])->latest()->get();
-        
-        return response()->json($articles);
-    }
+    // Di dalam Controller khusus untuk tampilan luar/user
+public function index()
+{
+    // HANYA ambil yang statusnya published
+    $articles = Article::where('status', 'published')
+                        ->with('thumbnail')
+                        ->latest()
+                        ->get();
+
+    return response()->json($articles);
+}
 
     public function show($slug): JsonResponse
     {

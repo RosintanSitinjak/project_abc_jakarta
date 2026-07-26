@@ -2,22 +2,20 @@
 
 namespace App\Http\Controllers;
 
+use Barryvdh\DomPDF\Facade\Pdf;
 use App\Models\Book;
 use App\Models\Category;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log; 
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 use App\Http\Controllers\Concerns\ManagesAttachments;
+use Illuminate\Validation\Rule;
 
 class BookController extends Controller
 {
     use ManagesAttachments; 
 
-    /**
-     * Tampil Daftar Buku (Untuk Admin & Publik)
-     */
     public function index(Request $request): JsonResponse
     {
         $query = Book::with(['category', 'thumbnail']);
@@ -26,17 +24,22 @@ class BookController extends Controller
             $query->where('category_id', $request->category_id);
         }
 
+        // --- FITUR BARU: Filter Stok Kritis ---
+        if ($request->low_stock === 'true') {
+            $query->whereColumn('stock', '<=', 'rop_point');
+        }
+
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
                 $q->where('title', 'ILIKE', "%{$search}%")
-                  ->orWhere('author', 'ILIKE', "%{$search}%");
+                  ->orWhere('author', 'ILIKE', "%{$search}%")
+                  ->orWhere('isbn', 'ILIKE', "%{$search}%");
             });
         }
 
         $books = $query->latest()->get();
 
-        // Memberikan URL Gambar Lengkap untuk Karla (User)
         $books->transform(function ($book) {
             $book->image_url = $book->thumbnail ? asset('storage/' . $book->thumbnail->path) : null;
             return $book;
@@ -45,9 +48,6 @@ class BookController extends Controller
         return response()->json($books);
     }
 
-    /**
-     * Simpan Buku Baru
-     */
     public function store(Request $request): JsonResponse
     {
         $data = $request->validate([
@@ -56,42 +56,23 @@ class BookController extends Controller
             'price'       => 'required|integer',
             'stock'       => 'required|integer',
             'rop_point'   => 'required|integer',
-            'author'      => 'nullable',
-            'isbn'        => 'nullable',
-            'member_price'=> 'nullable',
-            'description' => 'nullable',
+            'author'      => 'nullable|string',
+            'isbn'        => 'nullable|string|unique:books,isbn', // Boleh kosong, unik jika diisi
+            'member_price'=> 'nullable|integer',
+            'description' => 'nullable|string',
             'thumbnail_id'=> 'nullable',
         ]);
 
-        // OTOMASI SLUG: Agar link tidak undefined di sisi Karla
         $data['slug'] = Str::slug($request->title) . '-' . rand(100, 999);
-
         $book = Book::create($data);
 
-        // Menghubungkan Gambar
         if ($request->filled('thumbnail_id')) {
             $this->setSingleAttachment($book, 'thumbnail', $request->thumbnail_id, 'thumbnail');
-        }
-
-        // Cek Peringatan Stok (ROP)
-        if ($book->stock <= $book->rop_point) {
-            $this->sendRestockNotification($book);
         }
 
         return response()->json($book->load(['category', 'thumbnail']), 201);
     }
 
-    /**
-     * Detail Buku
-     */
-    public function show(Book $book): JsonResponse
-    {
-        return response()->json($book->load(['category', 'thumbnail']));
-    }
-
-    /**
-     * Update Data Buku
-     */
     public function update(Request $request, Book $book): JsonResponse
     {
         $data = $request->validate([
@@ -100,52 +81,46 @@ class BookController extends Controller
             'price'       => 'required|integer',
             'stock'       => 'required|integer',
             'rop_point'   => 'required|integer',
-            'author'      => 'nullable',
-            'isbn'        => 'nullable',
-            'member_price'=> 'nullable',
-            'description' => 'nullable',
+            'author'      => 'nullable|string',
+            'isbn'        => ['nullable', 'string', Rule::unique('books', 'isbn')->ignore($book->id)],
+            'member_price'=> 'nullable|integer',
+            'description' => 'nullable|string',
             'thumbnail_id'=> 'nullable',
         ]);
 
-        // Update Slug jika judul berubah
-        $data['slug'] = Str::slug($request->title) . '-' . rand(100, 999);
-
         $book->update($data);
 
-        // Update Gambar
         if ($request->filled('thumbnail_id')) {
             $this->setSingleAttachment($book, 'thumbnail', $request->thumbnail_id, 'thumbnail');
-        }
-
-        // Cek Peringatan Stok (ROP)
-        if ($book->stock <= $book->rop_point) {
-            $this->sendRestockNotification($book);
         }
 
         return response()->json($book->load(['category', 'thumbnail']));
     }
 
     /**
-     * Logika Notifikasi ROP
+     * FITUR BARU: Tambah Stok Instan (Restock)
      */
-    private function sendRestockNotification($book)
+    public function restock(Request $request, $id): JsonResponse
     {
-        $adminPhone = '6281376990897'; 
-        $pesan = "⚠️ *PERINGATAN STOK KRITIS*\n\n" .
-                 "Buku: *{$book->title}*\n" .
-                 "Sisa Stok: *{$book->stock}*\n" .
-                 "Batas ROP: {$book->rop_point}\n\n" .
-                 "Mohon segera lakukan pengajuan restock ke IPH.";
+        $request->validate(['quantity' => 'required|integer|min:1']);
+        $book = Book::findOrFail($id);
+        $book->increment('stock', $request->quantity);
 
-        Log::info("WA Terkirim ke Admin: " . $pesan);
+        return response()->json(['message' => "Stok {$book->title} berhasil ditambah!", 'new_stock' => $book->stock]);
     }
 
-    /**
-     * Hapus Buku
-     */
     public function destroy(Book $book): JsonResponse
     {
         $book->delete();
         return response()->json(['status' => 'deleted']);
+    }
+
+    public function exportPdf()
+    {
+        $books = Book::with('category')->orderBy('title', 'asc')->get();
+        $tanggalCetak = \Carbon\Carbon::now()->translatedFormat('d F Y H:i');
+        $pdf = Pdf::loadView('reports.inventory_pdf', ['books' => $books, 'tanggalCetak' => $tanggalCetak]);
+        $pdf->setPaper('a4', 'landscape');
+        return $pdf->download('Laporan-Stok-ABC-Jakarta-' . date('Y-m-d') . '.pdf');
     }
 }
