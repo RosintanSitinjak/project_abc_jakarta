@@ -26,7 +26,7 @@ class OrderController extends Controller
             $query->whereBetween('created_at', [$request->start_date . ' 00:00:00', $request->end_date . ' 23:59:59']);
         }
 
-        // Filter Spesifik (PENTING untuk Buku Piutang)
+        // Filter Spesifik
         if ($request->filled('payment_method')) $query->where('payment_method', $request->payment_method);
         if ($request->filled('payment_status')) $query->where('payment_status', $request->payment_status);
         
@@ -56,10 +56,10 @@ class OrderController extends Controller
     public function store(Request $request): JsonResponse
     {
         $request->validate([
-            'customer_id' => 'required|exists:customers,id',
+            'customer_id'    => 'required|exists:customers,id',
             'payment_method' => 'required',
-            'items' => 'required|array',
-            'total_amount' => 'required',
+            'items'          => 'required|array',
+            'total_amount'   => 'required',
         ]);
 
         return DB::transaction(function () use ($request) {
@@ -68,16 +68,16 @@ class OrderController extends Controller
             $remaining = $request->total_amount - $paidAtStart;
 
             $order = Order::create([
-                'customer_id' => $request->customer_id,
-                'order_number' => 'INV-' . date('Ymd') . '-' . strtoupper(Str::random(4)),
-                'total_amount' => $request->total_amount,
+                'customer_id'      => $request->customer_id,
+                'order_number'     => 'INV-' . date('Ymd') . '-' . strtoupper(Str::random(4)),
+                'total_amount'     => $request->total_amount,
                 'remaining_amount' => $remaining,
-                'payment_method' => $request->payment_method,
-                'payment_status' => ($remaining <= 0) ? 'paid' : 'unpaid',
+                'payment_method'   => $request->payment_method,
+                'payment_status'   => ($remaining <= 0) ? 'paid' : 'unpaid',
                 'payment_proof_id' => $request->payment_proof_id,
-                'source' => 'admin_manual',
-                'created_at' => $request->date ?? now(),
-                'due_date' => Carbon::parse($request->date ?? now())->addDays(30),
+                'source'           => 'admin_manual',
+                'created_at'       => $request->date ?? now(),
+                'due_date'         => Carbon::parse($request->date ?? now())->addDays(30),
             ]);
 
             if ($request->filled('payment_proof_id')) {
@@ -88,16 +88,24 @@ class OrderController extends Controller
 
             if ($paidAtStart > 0) {
                 DB::table('debt_payments')->insert([
-                    'id' => Str::uuid(), 'customer_id' => $customer->id, 'amount' => $paidAtStart,
-                    'payment_method' => $request->payment_method, 'attachment_id' => $request->payment_proof_id ?? null,
-                    'created_at' => $order->created_at, 'updated_at' => now(),
+                    'id'             => Str::uuid(), 
+                    'customer_id'    => $customer->id, 
+                    'amount'         => $paidAtStart,
+                    'payment_method' => $request->payment_method, 
+                    'attachment_id'  => $request->payment_proof_id ?? null,
+                    'created_at'     => $order->created_at, 
+                    'updated_at'     => now(),
                 ]);
             }
 
             foreach ($request->items as $item) {
                 $book = Book::find($item['book_id']);
                 $finalPrice = ($customer->type === 'penginjil') ? ($book->member_price ?? $book->price) : $book->price;
-                $order->items()->create(['book_id' => $book->id, 'qty' => $item['qty'], 'price_at_purchase' => $finalPrice]);
+                $order->items()->create([
+                    'book_id'           => $book->id, 
+                    'qty'               => $item['qty'], 
+                    'price_at_purchase' => $finalPrice
+                ]);
                 $book->decrement('stock', $item['qty']);
             }
             return response()->json($order->load(['customer', 'items.book']), 201);
@@ -106,7 +114,11 @@ class OrderController extends Controller
 
     public function pay(Request $request, $id): JsonResponse
     {
-        $request->validate(['amount' => 'required|integer|min:1', 'method' => 'required|string', 'attachment_id' => 'nullable']);
+        $request->validate([
+            'amount'        => 'required|integer|min:1', 
+            'method'        => 'required|string', 
+            'attachment_id' => 'nullable'
+        ]);
         
         $order = Order::with('customer')->findOrFail($id);
 
@@ -119,16 +131,16 @@ class OrderController extends Controller
             }
 
             DB::table('debt_payments')->insert([
-                'id' => Str::uuid(),
-                'customer_id' => $order->customer_id,
-                'amount' => $request->amount,
+                'id'             => Str::uuid(),
+                'customer_id'    => $order->customer_id,
+                'amount'         => $request->amount,
                 'payment_method' => $request->method,
-                'attachment_id' => $request->attachment_id,
-                'created_at' => now(),
-                'updated_at' => now(),
+                'attachment_id'  => $request->attachment_id,
+                'created_at'     => now(),
+                'updated_at'     => now(),
             ]);
 
-            return response()->json(['message' => 'Ok', 'order' => $order->fresh()]);
+            return response()->json(['message' => 'Pembayaran berhasil disimpan', 'order' => $order->fresh()]);
         });
     }
 
@@ -137,19 +149,115 @@ class OrderController extends Controller
         $order = Order::findOrFail($id);
         $oldStatus = $order->payment_status;
         $order->update($request->only(['payment_status', 'shipping_status', 'tracking_number', 'courier_name']));
+        
         if ($request->filled('payment_proof_id')) {
-            $order->payment_proof_id = $request->payment_proof_id; $order->save();
+            $order->payment_proof_id = $request->payment_proof_id; 
+            $order->save();
             $this->setSingleAttachment($order, 'thumbnail', $request->payment_proof_id, 'payment_proof');
         }
+
         if ($oldStatus === 'unpaid' && $order->payment_status === 'paid') {
             $customer = Customer::withTrashed()->find($order->customer_id);
-            $customer->decrement('current_debt', $order->remaining_amount);
+            if ($customer) {
+                $customer->decrement('current_debt', $order->remaining_amount);
+            }
             $order->update(['remaining_amount' => 0]);
         }
         return response()->json($order->load(['customer', 'items.book', 'thumbnail']));
     }
 
-    public function cancel($id): JsonResponse { /* ... sama ... */ }
-    public function downloadInvoice($id) { /* ... sama ... */ }
-    public function exportMonthlyReport(Request $request) { /* ... sama ... */ }
-}
+    /**
+     * BATALKAN PESANAN: Kembalikan Stok & Kurangi Hutang Pelanggan
+     */
+    public function cancel($id): JsonResponse 
+    {
+        $order = Order::with('items')->findOrFail($id);
+
+        if ($order->payment_status === 'cancelled') {
+            return response()->json(['message' => 'Pesanan ini sudah dibatalkan sebelumnya.'], 422);
+        }
+
+        return DB::transaction(function () use ($order) {
+            // 1. Kembalikan stok buku
+            foreach ($order->items as $item) {
+                $book = Book::find($item->book_id);
+                if ($book) {
+                    $book->increment('stock', $item->qty);
+                }
+            }
+
+            // 2. Jika ada sisa tagihan, kurangi hutang customer
+            if ($order->remaining_amount > 0) {
+                $customer = Customer::withTrashed()->find($order->customer_id);
+                if ($customer) {
+                    $customer->decrement('current_debt', $order->remaining_amount);
+                }
+            }
+
+            $order->update([
+                'payment_status'   => 'cancelled',
+                'remaining_amount' => 0
+            ]);
+
+            return response()->json(['message' => 'Pesanan berhasil dibatalkan dan stok buku telah dikembalikan.']);
+        });
+    }
+
+    /**
+     * CETAK PDF INVOICE RESMI ABC JAKARTA
+     */
+    public function downloadInvoice($id) 
+    {
+        $order = Order::with(['customer' => fn($q) => $q->withTrashed(), 'items.book'])->findOrFail($id);
+        $tanggalCetak = Carbon::now()->translatedFormat('d F Y H:i');
+
+        // Menggunakan invoice_pdf.blade.php sesuai struktur folder views/reports
+        $viewName = view()->exists('reports.invoice_pdf') ? 'reports.invoice_pdf' : 'reports.invoice';
+
+        $pdf = Pdf::loadView($viewName, [
+            'order'        => $order,
+            'tanggalCetak' => $tanggalCetak
+        ]);
+        
+        $pdf->setPaper('a4', 'portrait');
+        return $pdf->download('Invoice-' . $order->order_number . '.pdf');
+    }
+
+    /**
+     * CETAK PDF LAPORAN PESANAN TERFILTER (BULANAN)
+     */
+public function exportMonthlyReport(Request $request) 
+    {
+        $query = Order::with(['customer' => fn($q) => $q->withTrashed(), 'items.book']);
+
+        // Terapkan filter tanggal jika diisi
+        if ($request->filled('start_date') && $request->filled('end_date')) {
+            $query->whereBetween('created_at', [$request->start_date . ' 00:00:00', $request->end_date . ' 23:59:59']);
+        }
+        if ($request->filled('payment_method')) $query->where('payment_method', $request->payment_method);
+        if ($request->filled('payment_status')) $query->where('payment_status', $request->payment_status);
+        if ($request->filled('type')) {
+            $query->whereHas('customer', fn($q) => $q->where('type', $request->type));
+        }
+
+        $orders = $query->latest()->get();
+
+        // 1. Buat teks Periode dinamis sesuai filter tanggal yang dipilih
+        if ($request->filled('start_date') && $request->filled('end_date')) {
+            $periode = Carbon::parse($request->start_date)->translatedFormat('d M Y') . ' s/d ' . Carbon::parse($request->end_date)->translatedFormat('d M Y');
+        } elseif ($request->filled('start_date')) {
+            $periode = 'Mulai ' . Carbon::parse($request->start_date)->translatedFormat('d M Y');
+        } else {
+            $periode = 'Bulan ' . Carbon::now()->translatedFormat('F Y');
+        }
+
+        // 2. Kirim $orders dan $periode ke template Blade kamu
+        $pdf = Pdf::loadView('reports.monthly_sales_pdf', [
+            'orders'  => $orders,
+            'periode' => $periode,
+        ]);
+
+        $pdf->setPaper('a4', 'portrait');
+        return $pdf->download('Laporan-Penjualan-ABC-Jakarta-' . date('Y-m-d') . '.pdf');
+    }
+    }

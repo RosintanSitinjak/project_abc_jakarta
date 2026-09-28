@@ -14,8 +14,8 @@
 <body>
     <div class="header">
         <h2>ADVENTIST BOOK CENTER (ABC) JAKARTA</h2>
-        <p style="font-size: 14px; font-weight: bold; color: #00A9C3;">LAPORAN PENJUALAN LITERASI</p>
-        <p>Periode: {{ $periode }}</p>
+        <p style="font-size: 14px; font-weight: bold; color: #00A9C3;">LAPORAN PENJUALAN BUKU</p>
+        <p>Periode: {{ $periode ?? 'Semua Periode' }}</p>
     </div>
 
     <table>
@@ -32,21 +32,27 @@
         </thead>
         <tbody>
             @php $totalOmzet = 0; $totalPiutang = 0; @endphp
-            @foreach($orders as $index => $order)
+            @forelse($orders as $index => $order)
             @php 
                 $totalOmzet += $order->total_amount; 
                 $totalPiutang += $order->remaining_amount;
             @endphp
             <tr>
                 <td style="text-align:center;">{{ $index + 1 }}</td>
-                <td>{{ $order->created_at->format('d/m/y') }}</td>
+                <td>{{ $order->created_at ? $order->created_at->format('d/m/Y') : '-' }}</td>
                 <td><strong>{{ $order->order_number }}</strong></td>
-                <td>{{ $order->customer->name }}</td>
-                <td style="text-align:center;">{{ strtoupper($order->payment_method) }}</td>
+                <td>{{ $order->customer?->name ?? 'Pelanggan Umum' }}</td>
+                <td style="text-align:center;">{{ strtoupper($order->payment_method ?? '-') }}</td>
                 <td style="text-align:right;">Rp{{ number_format($order->total_amount, 0, ',', '.') }}</td>
                 <td style="text-align:right;">Rp{{ number_format($order->remaining_amount, 0, ',', '.') }}</td>
             </tr>
-            @endforeach
+            @empty
+            <tr>
+                <td colspan="7" style="text-align:center; padding: 15px; color: #888;">
+                    Tidak ada transaksi penjualan pada periode ini.
+                </td>
+            </tr>
+            @endforelse
         </tbody>
     </table>
 

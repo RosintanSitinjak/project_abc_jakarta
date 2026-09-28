@@ -14,6 +14,7 @@
             clearable 
             class="w-full sm:w-64"
             @keyup.enter="loadCategories"
+            @clear="loadCategories"
           >
             <template #prefix><Icon icon="solar:magnifer-linear" /></template>
           </el-input>
@@ -23,30 +24,67 @@
 
       <!-- TABEL DAFTAR KATEGORI -->
       <div class="mt-6 overflow-x-auto">
-        <el-table :data="categories" v-loading="loading" stripe border class="w-full rounded-xl overflow-hidden">
-          <el-table-column prop="name" label="Nama Kategori" min-width="180" />
-          <el-table-column prop="description" label="Deskripsi" min-width="250" show-overflow-tooltip />
-          
-          <!-- KOLOM KOLEKSI (KLIK-ABLE) -->
-          <el-table-column label="Koleksi" width="120" align="center">
+        <el-table :data="categories" v-loading="loading" stripe border class="w-full rounded-xl overflow-hidden text-xs">
+          <!-- NAMA KATEGORI -->
+          <el-table-column prop="name" label="Nama Kategori" min-width="180">
             <template #default="{ row }">
-              <el-button 
-                type="primary" 
-                link 
-                class="font-bold"
-                @click="$router.push({ path: '/admin/books', query: { category_id: row.id } })"
-              >
-                {{ row.books_count }} Judul
-                <Icon icon="solar:alt-arrow-right-linear" class="ml-1" />
-              </el-button>
+              <span class="text-[#1B293C] uppercase tracking-wide">{{ row.name }}</span>
             </template>
           </el-table-column>
 
+          <!-- DESKRIPSI (DENGAN TOOLTIP OTOMATIS) -->
+          <el-table-column prop="description" label="Deskripsi" min-width="260" show-overflow-tooltip>
+            <template #default="{ row }">
+              <span class="text-slate-600">{{ row.description || '-' }}</span>
+            </template>
+          </el-table-column>
+          
+          <!-- KOLOM KOLEKSI (KLIK-ABLE KE KATALOG) -->
+          <el-table-column label="Koleksi" width="130" align="center">
+            <template #default="{ row }">
+              <el-tooltip content="Lihat daftar buku kategori ini" placement="top">
+                <el-button 
+                  type="primary" 
+                  link 
+                  class="font-bold !text-xs"
+                  @click="$router.push({ path: '/admin/books', query: { category_id: row.id } })"
+                >
+                  <span :class="row.books_count > 0 ? 'text-[#00A9C3]' : 'text-slate-400'">
+                    {{ row.books_count }} Judul
+                  </span>
+                  <Icon icon="solar:alt-arrow-right-linear" class="ml-1" />
+                </el-button>
+              </el-tooltip>
+            </template>
+          </el-table-column>
+
+          <!-- AKSI (EDIT & HAPUS BERPROTEKSI) -->
           <el-table-column label="Aksi" width="150" align="center">
             <template #default="{ row }">
-              <div class="flex justify-center gap-2">
+              <div class="flex justify-center gap-1.5">
                 <el-button size="small" @click="openEdit(row)">Edit</el-button>
-                <el-button size="small" type="danger" plain @click="handleDelete(row)">Hapus</el-button>
+                
+                <!-- Tooltip Proteksi jika kategori masih ada bukunya -->
+                <el-tooltip 
+                  v-if="row.books_count > 0" 
+                  :content="`Tidak dapat dihapus karena masih memuat ${row.books_count} buku aktif`" 
+                  placement="top"
+                >
+                  <span>
+                    <el-button size="small" type="danger" plain disabled>Hapus</el-button>
+                  </span>
+                </el-tooltip>
+
+                <!-- Tombol Hapus aktif jika koleksi 0 buku -->
+                <el-button 
+                  v-else 
+                  size="small" 
+                  type="danger" 
+                  plain 
+                  @click="handleDelete(row)"
+                >
+                  Hapus
+                </el-button>
               </div>
             </template>
           </el-table-column>
@@ -55,13 +93,28 @@
     </section>
 
     <!-- FORM DIALOG -->
-    <el-dialog v-model="isDialogOpen" :title="isEditing ? 'Edit Kategori' : 'Tambah Kategori Baru'" width="450px" append-to-body>
+    <el-dialog 
+      v-model="isDialogOpen" 
+      :title="isEditing ? 'Edit Kategori' : 'Tambah Kategori Baru'" 
+      width="450px" 
+      append-to-body
+      align-center
+    >
       <el-form label-position="top">
         <el-form-item label="Nama Kategori" required>
-          <el-input v-model="form.name" placeholder="Misal: Sekolah Sabat" @keyup.enter="submitForm" />
+          <el-input 
+            v-model="form.name" 
+            placeholder="Misal: Sekolah Sabat" 
+            @keyup.enter="submitForm" 
+          />
         </el-form-item>
         <el-form-item label="Deskripsi">
-          <el-input v-model="form.description" type="textarea" :rows="3" placeholder="Penjelasan singkat..." />
+          <el-input 
+            v-model="form.description" 
+            type="textarea" 
+            :rows="3" 
+            placeholder="Penjelasan singkat mengenai kategori ini..." 
+          />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -96,12 +149,16 @@ const loadCategories = async () => {
   try {
     const res = await apiFetch(`/categories?search=${searchQuery.value}`);
     categories.value = unwrap(res);
-  } finally { loading.value = false; }
+  } finally { 
+    loading.value = false; 
+  }
 };
 
 const openCreate = () => {
   isEditing.value = false;
-  form.name = ''; form.description = '';
+  editingId.value = null;
+  form.name = ''; 
+  form.description = '';
   isDialogOpen.value = true;
 };
 
@@ -114,38 +171,63 @@ const openEdit = (row: any) => {
 };
 
 const submitForm = async () => {
-  if (!form.name) return ElMessage.warning('Nama kategori wajib diisi');
+  if (!form.name.trim()) return ElMessage.warning('Nama kategori wajib diisi.');
+  
   loadingSubmit.value = true;
   try {
     const method = isEditing.value ? 'PUT' : 'POST';
     const url = isEditing.value ? `/categories/${editingId.value}` : '/categories';
     await apiFetch(url, { method, body: form });
-    ElMessage.success('Kategori berhasil diperbarui');
+    
+    ElMessage.success(isEditing.value ? 'Kategori berhasil diperbarui!' : 'Kategori baru berhasil ditambahkan!');
     isDialogOpen.value = false;
     loadCategories();
-  } catch (e) {
-    ElMessage.error('Gagal menyimpan data');
-  } finally { loadingSubmit.value = false; }
-};
-
-const handleDelete = async (row: any) => {
-  try {
-    await ElMessageBox.confirm(`Hapus kategori ${row.name}?`, 'Peringatan', { type: 'warning' });
-    await apiFetch(`/categories/${row.id}`, { method: 'DELETE' });
-    ElMessage.success('Berhasil dihapus');
-    loadCategories();
   } catch (e: any) {
-    // Menangkap pesan error "Gagal menghapus karena ada buku" dari backend
-    const msg = e.data?.message || 'Terjadi kesalahan';
-    ElNotification({ title: 'Gagal Hapus', message: msg, type: 'error' });
+    const msg = e.data?.message || 'Gagal menyimpan kategori';
+    ElMessage.error(msg);
+  } finally { 
+    loadingSubmit.value = false; 
   }
 };
 
-watch(searchQuery, (v) => { if (v === '') loadCategories(); });
+const handleDelete = async (row: any) => {
+  // Pengaman lapis pertama di frontend
+  if (row.books_count > 0) {
+    return ElMessageBox.alert(
+      `Kategori "${row.name}" tidak dapat dihapus karena masih memuat ${row.books_count} judul buku aktif. Pindahkan buku terlebih dahulu ke kategori lain.`,
+      'Perlindungan Data',
+      { type: 'warning', confirmButtonText: 'Saya Mengerti' }
+    );
+  }
+
+  try {
+    await ElMessageBox.confirm(`Hapus kategori "${row.name}"?`, 'Konfirmasi Hapus', { 
+      type: 'warning',
+      confirmButtonText: 'Ya, Hapus',
+      cancelButtonText: 'Batal'
+    });
+    
+    await apiFetch(`/categories/${row.id}`, { method: 'DELETE' });
+    ElMessage.success('Kategori berhasil dihapus');
+    loadCategories();
+  } catch (e: any) {
+    if (e !== 'cancel') {
+      const msg = e.data?.message || 'Terjadi kesalahan saat menghapus data';
+      ElNotification({ title: 'Gagal Hapus', message: msg, type: 'error' });
+    }
+  }
+};
+
+watch(searchQuery, (v) => { 
+  if (v === '') loadCategories(); 
+});
+
 onMounted(loadCategories);
 </script>
 
 <style scoped>
 @reference "tailwindcss";
-.glass-panel { @apply rounded-[1.5rem] border border-slate-200 bg-white shadow-sm; }
+.glass-panel { 
+  @apply rounded-[1.5rem] border border-slate-200 bg-white shadow-sm; 
+}
 </style>

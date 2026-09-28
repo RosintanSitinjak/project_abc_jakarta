@@ -9,27 +9,44 @@
         </div>
         
         <div class="flex flex-wrap items-center gap-3">
-          <el-input v-model="searchQuery" placeholder="Cari nama/email..." clearable class="w-full sm:w-64">
+          <el-input 
+            v-model="searchQuery" 
+            placeholder="Cari nama/email..." 
+            clearable 
+            class="w-full sm:w-64"
+            @keyup.enter="loadUsers"
+            @clear="loadUsers"
+          >
             <template #prefix><Icon icon="solar:magnifer-linear" /></template>
           </el-input>
 
-          <el-select v-model="filterType" placeholder="Tipe" clearable @change="loadUsers" class="w-32">
+          <el-select 
+            v-model="filterType" 
+            placeholder="Semua Tipe" 
+            clearable 
+            @change="loadUsers" 
+            class="w-36"
+          >
             <el-option label="Jemaat" value="jemaat" />
-            <el-option label="Penginjil" value="penginjil" />
+            <el-option label="Penginjil (PL)" value="penginjil" />
             <el-option label="Gereja" value="gereja" />
+            <el-option label="Sekolah" value="sekolah" />
           </el-select>
 
           <el-button type="primary" color="#00A9C3" @click="openCreate">+ Tambah User</el-button>
         </div>
       </div>
 
-      <!-- TABEL DATA -->
+      <!-- TABEL DATA PENGGUNA -->
       <div class="overflow-x-auto">
-        <el-table :data="users" v-loading="loading" stripe border class="w-full rounded-xl overflow-hidden">
+        <el-table :data="users" v-loading="loading" stripe border class="w-full rounded-xl overflow-hidden text-xs">
+          <!-- NAMA & HAK AKSES -->
           <el-table-column prop="name" label="Nama & Hak Akses" min-width="180">
              <template #default="{ row }">
                 <div class="flex flex-col">
-                  <span :class="{'line-through text-slate-400': row.customer?.status === 'suspended'}" class="font-bold text-[#1B293C]">{{ row.name }}</span>
+                  <span :class="{'line-through text-slate-400': row.customer?.status === 'suspended'}" class="font-bold text-[#1B293C] text-xs">
+                    {{ row.name }}
+                  </span>
                   <div class="flex items-center gap-1 mt-1">
                     <el-tag v-if="row.role === 1" size="small" color="#1B293C" class="!text-white border-0 text-[8px] font-black">PIMPINAN</el-tag>
                     <el-tag v-else-if="row.role === 2" size="small" type="primary" class="text-[8px] font-black">STAFF ADMIN</el-tag>
@@ -39,50 +56,72 @@
              </template>
           </el-table-column>
 
-          <el-table-column prop="email" label="Email Login" min-width="200" />
+          <!-- EMAIL LOGIN -->
+          <el-table-column prop="email" label="Email Login" min-width="200">
+            <template #default="{ row }">
+              <span class="font-mono text-slate-700">{{ row.email }}</span>
+            </template>
+          </el-table-column>
           
-          <el-table-column label="WhatsApp" width="140">
+          <!-- WHATSAPP -->
+          <el-table-column label="WhatsApp" width="150">
              <template #default="{ row }">
-                <span v-if="row.customer?.phone" class="text-xs font-mono text-slate-600">{{ row.customer.phone }}</span>
-                <span v-else class="text-slate-300 italic text-[10px]">No Phone</span>
+                <span v-if="row.customer?.phone" class="font-mono text-slate-600 font-semibold">{{ row.customer.phone }}</span>
+                <span v-else class="text-slate-300 italic text-[11px]">No Phone</span>
              </template>
           </el-table-column>
 
+          <!-- STATUS AKUN -->
           <el-table-column label="Status Akun" width="110" align="center">
             <template #default="{ row }">
               <template v-if="row.customer">
-                <el-tag v-if="row.customer.status === 'approved'" size="small" type="success">AKTIF</el-tag>
-                <el-tag v-else-if="row.customer.status === 'pending'" size="small" type="warning">PENDING</el-tag>
-                <el-tag v-else-if="row.customer.status === 'suspended'" size="small" type="info">BLOKIR</el-tag>
-                <el-tag v-else size="small" type="danger">DITOLAK</el-tag>
+                <el-tag v-if="row.customer.status === 'approved'" size="small" type="success" class="font-bold">AKTIF</el-tag>
+                <el-tag v-else-if="row.customer.status === 'pending'" size="small" type="warning" class="font-bold">PENDING</el-tag>
+                <el-tag v-else-if="row.customer.status === 'suspended'" size="small" type="info" class="font-bold">BLOKIR</el-tag>
+                <el-tag v-else size="small" type="danger" class="font-bold">DITOLAK</el-tag>
               </template>
               <span v-else class="text-slate-300">-</span>
             </template>
           </el-table-column>
 
+          <!-- KOLOM AKSI -->
           <el-table-column label="Aksi" width="220" align="center">
             <template #default="{ row }">
-              <div class="flex justify-center gap-1">
-                <!-- FITUR WA HELPER: Kirim Kredensial -->
-                <el-tooltip v-if="row.role === 3 && row.customer?.phone" content="Kirim Detail Login ke WA" placement="top">
+              <div class="flex justify-center gap-1.5">
+                <!-- FITUR WA: Kirim Kredensial Lengkap -->
+                <el-tooltip v-if="row.role === 3 && row.customer?.phone" content="Kirim Detail Login & Akun via WA" placement="top">
                   <el-button circle size="small" type="success" @click="sendWhatsAppCredentials(row)">
                     <Icon icon="solar:letter-bold" />
                   </el-button>
                 </el-tooltip>
 
-                <!-- KHUSUS PL PENDING -->
+                <!-- KHUSUS VERIFIKASI AKUN PL (STATUS PENDING) -->
                 <template v-if="row.customer?.type === 'penginjil' && row.customer?.status === 'pending'">
                   <el-button size="small" type="success" @click="handleApprove(row.customer.id)">Setujui PL</el-button>
                   <el-button size="small" type="danger" plain @click="openRejectModal(row.customer.id)">Tolak</el-button>
                 </template>
 
-                <!-- AKSI UMUM -->
+                <!-- AKSI STANDAR PENGGUNA -->
                 <template v-else>
-                  <el-button circle size="small" type="primary" plain @click="openEdit(row)"><Icon icon="solar:pen-2-bold" /></el-button>
-                  <el-button v-if="row.customer" circle size="small" :type="row.customer.status === 'suspended' ? 'success' : 'warning'" plain @click="handleToggleStatus(row.customer.id)">
-                    <Icon :icon="row.customer.status === 'suspended' ? 'solar:play-bold' : 'solar:stop-bold'" />
-                  </el-button>
-                  <el-button v-if="row.id !== authUser?.id && row.role !== 1" circle size="small" type="danger" plain @click="confirmDelete(row)"><Icon icon="solar:trash-bin-trash-bold" /></el-button>
+                  <el-tooltip content="Edit Pengguna" placement="top">
+                    <el-button circle size="small" type="primary" plain @click="openEdit(row)">
+                      <Icon icon="solar:pen-2-bold" />
+                    </el-button>
+                  </el-tooltip>
+
+                  <!-- Tombol Suspend / Aktifkan -->
+                  <el-tooltip v-if="row.customer" :content="row.customer.status === 'suspended' ? 'Buka Blokir Akun' : 'Bekukan / Blokir Akun'" placement="top">
+                    <el-button circle size="small" :type="row.customer.status === 'suspended' ? 'success' : 'warning'" plain @click="handleToggleStatus(row.customer.id)">
+                      <Icon :icon="row.customer.status === 'suspended' ? 'solar:play-bold' : 'solar:stop-bold'" />
+                    </el-button>
+                  </el-tooltip>
+
+                  <!-- Tombol Hapus (Dilindungi: Akun Sendiri & Pimpinan Tidak Bisa Dihapus) -->
+                  <el-tooltip v-if="row.id !== authUser?.id && row.role !== 1" content="Hapus Pengguna" placement="top">
+                    <el-button circle size="small" type="danger" plain @click="confirmDelete(row)">
+                      <Icon icon="solar:trash-bin-trash-bold" />
+                    </el-button>
+                  </el-tooltip>
                 </template>
               </div>
             </template>
@@ -91,8 +130,8 @@
       </div>
     </section>
 
-    <!-- MODAL: TAMBAH & EDIT USER (INCLUDE NO HP) -->
-    <el-dialog v-model="isDialogOpen" :title="isEditing ? 'Edit Pengguna' : 'Tambah Pengguna Baru'" width="500px">
+    <!-- MODAL: TAMBAH & EDIT USER -->
+    <el-dialog v-model="isDialogOpen" :title="isEditing ? 'Edit Pengguna' : 'Tambah Pengguna Baru'" width="500px" append-to-body align-center>
       <el-form label-position="top">
         <el-form-item label="Nama Lengkap" required>
           <el-input v-model="form.name" placeholder="Masukkan nama lengkap..." />
@@ -110,9 +149,9 @@
               <el-option label="Pelanggan" :value="3" />
             </el-select>
           </el-form-item>
-          <!-- FIELD WHATSAPP BARU -->
+          
           <el-form-item label="No. WhatsApp">
-             <el-input v-model="form.phone" placeholder="628xxx" />
+             <el-input v-model="form.phone" placeholder="08xxxxxxxxxx" />
           </el-form-item>
         </div>
 
@@ -121,21 +160,24 @@
              <el-option label="Jemaat Umum" value="jemaat" />
              <el-option label="Penginjil Literatur (PL)" value="penginjil" />
              <el-option label="Gereja / Institusi" value="gereja" />
+             <el-option label="Sekolah" value="sekolah" />
           </el-select>
         </el-form-item>
 
         <div class="grid grid-cols-2 gap-4">
-          <el-form-item :label="isEditing ? 'Password Baru' : 'Password'">
-            <el-input v-model="form.password" type="password" show-password @keyup.enter="submitForm" />
+          <el-form-item :label="isEditing ? 'Password Baru (Opsional)' : 'Password'">
+            <el-input v-model="form.password" type="password" show-password placeholder="Minimal 8 karakter" @keyup.enter="submitForm" />
           </el-form-item>
           <el-form-item label="Konfirmasi Password">
-            <el-input v-model="form.password_confirmation" type="password" show-password @keyup.enter="submitForm" />
+            <el-input v-model="form.password_confirmation" type="password" show-password placeholder="Ulangi password" @keyup.enter="submitForm" />
           </el-form-item>
         </div>
       </el-form>
       <template #footer>
         <el-button @click="isDialogOpen = false">Batal</el-button>
-        <el-button type="primary" color="#00A9C3" :loading="loadingSubmit" @click="submitForm">Simpan User</el-button>
+        <el-button type="primary" color="#00A9C3" :loading="loadingSubmit" @click="submitForm" class="!rounded-xl px-8 font-bold">
+          Simpan User
+        </el-button>
       </template>
     </el-dialog>
   </AdminShell>
@@ -162,22 +204,44 @@ const isEditing = ref(false);
 const editingId = ref(null);
 
 const form = reactive({
-  name: '', email: '', role: 3, 
-  customer_type: 'jemaat', phone: '', // Ditambahkan
-  password: '', password_confirmation: ''
+  name: '', 
+  email: '', 
+  role: 3, 
+  customer_type: 'jemaat', 
+  phone: '',
+  password: '', 
+  password_confirmation: ''
 });
 
+// Load Data Pengguna dengan URLSearchParams Bersih
 const loadUsers = async () => {
   loading.value = true;
   try {
-    const res = await apiFetch(`/user-management?search=${searchQuery.value}&type=${filterType.value}&status=${filterStatus.value}`);
+    const params = new URLSearchParams();
+    if (searchQuery.value && searchQuery.value.trim()) params.append('search', searchQuery.value.trim());
+    if (filterType.value) params.append('type', filterType.value);
+    if (filterStatus.value) params.append('status', filterStatus.value);
+
+    const queryStr = params.toString() ? `?${params.toString()}` : '';
+    const res = await apiFetch(`/user-management${queryStr}`);
     users.value = res.data || res;
-  } finally { loading.value = false; }
+  } finally { 
+    loading.value = false; 
+  }
 };
 
 const openCreate = () => {
   isEditing.value = false;
-  Object.assign(form, { name: '', email: '', role: 3, customer_type: 'jemaat', phone: '', password: '', password_confirmation: '' });
+  editingId.value = null;
+  Object.assign(form, { 
+    name: '', 
+    email: '', 
+    role: 3, 
+    customer_type: 'jemaat', 
+    phone: '', 
+    password: '', 
+    password_confirmation: '' 
+  });
   isDialogOpen.value = true;
 };
 
@@ -197,35 +261,129 @@ const openEdit = (row: any) => {
 };
 
 const submitForm = async () => {
+  if (!form.name.trim() || !form.email.trim()) {
+    return ElMessage.warning('Nama lengkap dan email login wajib diisi.');
+  }
+
   loadingSubmit.value = true;
   try {
     const method = isEditing.value ? 'PUT' : 'POST';
-    await apiFetch(isEditing.value ? `/user-management/${editingId.value}` : '/user-management', { method, body: form });
-    ElMessage.success('Selesai!');
-    isDialogOpen.value = false; loadUsers();
-  } catch (e) { ElMessage.error('Gagal.'); }
-  finally { loadingSubmit.value = false; }
+    await apiFetch(isEditing.value ? `/user-management/${editingId.value}` : '/user-management', { 
+      method, 
+      body: form 
+    });
+    ElMessage.success(isEditing.value ? 'Data pengguna diperbarui!' : 'Pengguna baru berhasil ditambahkan!');
+    isDialogOpen.value = false; 
+    loadUsers();
+  } catch (e: any) { 
+    ElMessage.error(e.data?.message || 'Gagal menyimpan data pengguna.'); 
+  } finally { 
+    loadingSubmit.value = false; 
+  }
 };
 
+// KIRIM KREDENSIAL LOGIN LENGKAP VIA WHATSAPP
 const sendWhatsAppCredentials = (row: any) => {
-    const pass = "Sesuai saat pendaftaran"; // Password tidak bisa ditarik balik (hashed), jadi kita kasih instruksi
-    const message = `Syalom ${row.name},\n\nAkun Balai Buku Advent Jakarta Anda telah aktif.\nEmail: *${row.email}*\n\nSilakan login di website kami untuk memesan literatur rohani. Terima kasih! 🙏`;
-    const url = `https://api.whatsapp.com/send?phone=${row.customer?.phone}&text=${encodeURIComponent(message)}`;
-    window.open(url, '_blank');
+  const phone = row.customer?.phone;
+  if (!phone) return ElMessage.warning('Nomor WhatsApp tidak tersedia.');
+
+  // Bersihkan format nomor HP
+  let cleanPhone = phone.replace(/[^0-9]/g, '');
+  if (cleanPhone.startsWith('0')) {
+    cleanPhone = '62' + cleanPhone.slice(1);
+  }
+
+  // Template Pesan Lengkap dengan Email & Info Password
+  const message = 
+    `Salam damai sejahtera Bpk/Ibu *${row.name}*,\n\n` +
+    `Akun Anda di sistem portal *Adventist Book Center (ABC) Jakarta* telah aktif dan siap digunakan! Berikut rincian akses login Anda:\n\n` +
+    `📧 *Email Login*: ${row.email}\n` +
+    `🔑 *Password*: Gunakan password yang Anda daftarkan (atau default: *12345678* jika dibuatkan oleh Admin)\n` +
+    `🌐 *Link Login*: http://localhost:3000/login\n\n` +
+    `Silakan login untuk mulai memesan buku rohani, Buku Pelajaran Sekolah Sabat, dan literatur Advent dengan harga pelayanan Anda.\n\n` +
+    `Terima kasih dan Tuhan memberkati! 🙏`;
+
+  const url = `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(message)}`;
+  window.open(url, '_blank');
 };
 
-const handleApprove = async (id: string) => { await apiFetch(`/customers/${id}/approve`, { method: 'PATCH' }); loadUsers(); };
-const handleToggleStatus = async (id: string) => { await apiFetch(`/customers/${id}/toggle-status`, { method: 'PATCH' }); loadUsers(); };
+// SETUJUI AKUN PENGINJIL LITERATUR
+const handleApprove = async (id: string) => { 
+  try {
+    await apiFetch(`/customers/${id}/approve`, { method: 'PATCH' }); 
+    ElMessage.success('Akun Penginjil Literatur berhasil disetujui (AKTIF)!');
+    loadUsers(); 
+  } catch (e: any) {
+    ElMessage.error(e.data?.message || 'Gagal menyetujui akun.');
+  }
+};
+
+// TOLAK AKUN PENGINJIL LITERATUR DENGAN ALASAN
+const openRejectModal = async (id: string) => {
+  try {
+    const { value: reason } = await ElMessageBox.prompt('Masukkan alasan penolakan verifikasi akun:', 'Tolak Akun Penginjil Literatur', {
+      confirmButtonText: 'Tolak Akun',
+      cancelButtonText: 'Batal',
+      inputPlaceholder: 'Misal: Data keanggotaan PL tidak terverifikasi di Konferens',
+      type: 'warning'
+    });
+
+    await apiFetch(`/customers/${id}/reject`, { 
+      method: 'PATCH', 
+      body: { reason: reason || 'Data keanggotaan tidak terverifikasi.' } 
+    });
+    
+    ElMessage.success('Akun telah ditolak.');
+    loadUsers();
+  } catch (e: any) {
+    if (e !== 'cancel') {
+      ElMessage.error(e.data?.message || 'Gagal memproses penolakan.');
+    }
+  }
+};
+
+// TOGGLE SUSPEND / AKTIFKAN AKUN
+const handleToggleStatus = async (id: string) => { 
+  try {
+    await apiFetch(`/customers/${id}/toggle-status`, { method: 'PATCH' }); 
+    ElMessage.success('Status akun diperbarui.');
+    loadUsers(); 
+  } catch (e) {
+    ElMessage.error('Gagal mengubah status akun.');
+  }
+};
+
+// HAPUS PENGGUNA BERPROTEKSI
 const confirmDelete = async (row: any) => {
-  await ElMessageBox.confirm(`Hapus ${row.name}?`, 'Peringatan');
-  await apiFetch(`/user-management/${row.id}`, { method: 'DELETE' }); loadUsers();
+  try {
+    await ElMessageBox.confirm(`Hapus pengguna "${row.name}"? Akses login dan profil terkait akan dihapus.`, 'Konfirmasi Hapus', {
+      type: 'warning',
+      confirmButtonText: 'Ya, Hapus',
+      cancelButtonText: 'Batal'
+    });
+    
+    await apiFetch(`/user-management/${row.id}`, { method: 'DELETE' }); 
+    ElMessage.success('Pengguna berhasil dihapus.');
+    loadUsers();
+  } catch (e: any) {
+    if (e !== 'cancel') {
+      ElMessage.error(e.data?.message || 'Gagal menghapus pengguna.');
+    }
+  }
 };
 
-watch([searchQuery, filterType, filterStatus], () => loadUsers());
+// Auto-reload saat filter diubah atau di-clear
+watch([filterType, filterStatus], () => loadUsers());
+watch(searchQuery, (newVal) => {
+  if (!newVal || newVal.trim() === '') loadUsers();
+});
+
 onMounted(loadUsers);
 </script>
 
 <style scoped>
 @reference "tailwindcss";
-.glass-panel { @apply rounded-[1.5rem] border border-slate-200 bg-white shadow-sm; }
+.glass-panel { 
+  @apply rounded-[1.5rem] border border-slate-200 bg-white shadow-sm; 
+}
 </style>

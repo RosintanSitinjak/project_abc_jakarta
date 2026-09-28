@@ -11,65 +11,91 @@ use Illuminate\Support\Str;
 
 class RestockRequestController extends Controller
 {
+    /**
+     * Menampilkan daftar semua pengajuan restock (untuk Admin & Pak Andi)
+     */
     public function index(): JsonResponse
     {
-        // Load relasi book dan creator (user yang buat pengajuan)
         $requests = RestockRequest::with(['book', 'creator'])->latest()->get();
         return response()->json($requests);
     }
 
+    /**
+     * 1. Admin Mengajukan Penambahan Stok Buku
+     */
     public function store(Request $request): JsonResponse
     {
         $request->validate([
-            'book_id' => 'required|exists:books,id',
+            'book_id'  => 'required|exists:books,id',
             'quantity' => 'required|integer|min:1',
-            'note' => 'nullable|string'
+            'note'     => 'nullable|string'
         ]);
 
         $restock = RestockRequest::create([
-            'id' => (string) Str::uuid(),
-            'book_id' => $request->book_id,
-            'qty_requested' => $request->quantity, // Sesuai database
-            'admin_note' => $request->note,       // Sesuai database
-            'created_by' => auth()->id(),          // Sesuai database
-            'status' => 'pending'
+            'id'             => (string) Str::uuid(),
+            'book_id'        => $request->book_id,
+            'user_id'        => auth()->id(),          // Sesuai kolom database
+            'quantity'       => $request->quantity,    // Sesuai kolom database
+            'status'         => 'pending',
+            'pimpinan_notes' => null,
+            'is_completed'   => false,
         ]);
 
-        return response()->json(['message' => 'Pengajuan stok berhasil dikirim!'], 201);
+        return response()->json([
+            'message' => 'Pengajuan stok berhasil dikirim ke Pak Andi!',
+            'data'    => $restock->load(['book', 'creator'])
+        ], 201);
     }
 
+    /**
+     * 2. Keputusan Pak Andi: Menyetujui (ACC) atau Menolak (Reject)
+     * Komentar bersifat opsional (bisa diisi catatan/alasan, bisa juga dikosongkan)
+     */
     public function updateStatus(Request $request, $id): JsonResponse
     {
         $request->validate([
             'status' => 'required|in:approved,rejected',
-            'notes' => 'nullable|string'
+            'notes'  => 'nullable|string' // Bisa diisi catatan atau dibiarkan kosong
         ]);
 
         $restock = RestockRequest::findOrFail($id);
         
         $restock->update([
-            'status' => $request->status,
-            'leader_comment' => $request->notes, // Sesuai database
-            'approved_by' => auth()->id(),       // Pak Andi yang approve
-            'qty_approved' => $restock->qty_requested // Set default approve sama dengan request
+            'status'         => $request->status,
+            'pimpinan_notes' => $request->notes, // Menyimpan komentar Pak Andi
         ]);
 
-        return response()->json(['message' => 'Tanggapan Pimpinan berhasil disimpan.']);
+        $statusText = $request->status === 'approved' ? 'disetujui (ACC)' : 'ditolak';
+
+        return response()->json([
+            'message' => "Pengajuan restock berhasil {$statusText} oleh Pak Andi."
+        ]);
     }
 
+    /**
+     * 3. Barang dari IPH Tiba di ABC Jakarta: Tambahkan Stok Otomatis
+     */
     public function markAsCompleted($id): JsonResponse
     {
         $restock = RestockRequest::findOrFail($id);
 
         if ($restock->status !== 'approved') {
-            return response()->json(['message' => 'Barang hanya bisa diterima jika sudah disetujui.'], 422);
+            return response()->json([
+                'message' => 'Barang hanya bisa diselesaikan jika sudah disetujui (ACC) oleh Pak Andi.'
+            ], 422);
+        }
+
+        if ($restock->is_completed) {
+            return response()->json([
+                'message' => 'Pengajuan restock ini sudah pernah diselesaikan sebelumnya.'
+            ], 422);
         }
 
         return DB::transaction(function () use ($restock) {
             $book = Book::find($restock->book_id);
             if ($book) {
-                // Tambah stok berdasarkan jumlah yang disetujui pimpinan
-                $book->increment('stock', $restock->qty_approved);
+                // Tambah stok buku sesuai quantity yang diajukan
+                $book->increment('stock', $restock->quantity);
             }
 
             $restock->update([
@@ -77,7 +103,9 @@ class RestockRequestController extends Controller
                 'completed_at' => now()
             ]);
 
-            return response()->json(['message' => 'Stok buku resmi diperbarui di gudang!']);
+            return response()->json([
+                'message'   => "Buku dari IPH berhasil diterima! Stok {$book?->title} otomatis bertambah {$restock->quantity} pcs di katalog."
+            ]);
         });
     }
 
