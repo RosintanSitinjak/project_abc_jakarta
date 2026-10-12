@@ -9,10 +9,20 @@ use Illuminate\Support\Str;
 
 class CategoryController extends Controller
 {
-    public function index(): JsonResponse
+    /**
+     * Tampil Daftar Kategori dengan Fitur Pencarian & Hitung Jumlah Buku
+     */
+    public function index(Request $request): JsonResponse
     {
-        // Ambil data terbaru
-        return response()->json(Category::latest()->get());
+        // withCount('books') akan menambahkan kolom virtual 'books_count' secara otomatis
+        $query = Category::query()->withCount('books');
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where('name', 'ILIKE', "%{$search}%");
+        }
+
+        return response()->json($query->latest()->get());
     }
 
     public function store(Request $request): JsonResponse
@@ -22,10 +32,9 @@ class CategoryController extends Controller
             'description' => 'nullable|string'
         ]);
 
-        // LOGIKA SAKTI: Membuat slug otomatis agar database tidak error
         $category = Category::create([
             'name' => $request->name,
-            'slug' => Str::slug($request->name), // "Sekolah Sabat" jadi "sekolah-sabat"
+            'slug' => Str::slug($request->name) . '-' . rand(100, 999),
             'description' => $request->description,
         ]);
 
@@ -41,7 +50,7 @@ class CategoryController extends Controller
 
         $category->update([
             'name' => $request->name,
-            'slug' => Str::slug($request->name),
+            'slug' => Str::slug($request->name) . '-' . rand(100, 999),
             'description' => $request->description,
         ]);
 
@@ -50,6 +59,8 @@ class CategoryController extends Controller
 
     public function destroy(Category $category): JsonResponse
     {
+        // Karena ada relasi, di skripsi bisa dijelaskan: 
+        // Menggunakan SoftDeletes agar data histori buku tetap aman.
         $category->delete();
         return response()->json(['status' => 'deleted']);
     }

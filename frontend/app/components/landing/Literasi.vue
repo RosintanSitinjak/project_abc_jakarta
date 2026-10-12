@@ -1,11 +1,11 @@
 <template>
   <section class="py-20 md:py-24 bg-[#00a9c3]/5 relative overflow-hidden">
     <!-- Dekorasi Latar Belakang Halus -->
-    <div class="absolute top-1/4 right-0 w-72 h-72 bg-[#00a9c3]/5 rounded-full blur-3xl -z-10 "></div>
+    <div class="absolute top-1/4 right-0 w-72 h-72 bg-[#00a9c3]/5 rounded-full blur-3xl -z-10"></div>
 
     <div class="container mx-auto px-6 lg:px-8 max-w-6xl">
       <!-- Header Seksi: Judul & Tombol Lihat Semua -->
-      <div class="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 mb-12 border-b border-gray-100 pb-6">
+      <div class="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 mb-12 border-b border-gray-200/60 pb-6">
         <div>
           <!-- Tagline Kecil -->
           <span class="block text-xs font-bold uppercase tracking-widest text-[#00a9c3] mb-2">
@@ -35,7 +35,7 @@
       </div>
 
       <!-- State: Jika Artikel Kosong -->
-      <div v-else-if="!articles || articles.length === 0" class="text-center py-12 bg-white rounded-2xl p-6">
+      <div v-else-if="!articles || articles.length === 0" class="text-center py-12 bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
         <p class="text-gray-500 text-sm font-medium">Belum ada artikel literasi yang diterbitkan saat ini.</p>
       </div>
 
@@ -44,43 +44,45 @@
         <article 
           v-for="item in articles" 
           :key="item.id" 
-          class="group flex flex-col h-full bg-white rounded-2xl mb-5 transition-all duration-300"
+          class="group flex flex-col h-full bg-white rounded-2xl border border-gray-200/60 p-5 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300"
         >
-          <!-- Bagian Frame Foto Cover -->
-          <div class="relative aspect-[16/10] overflow-hidden  mb-5 border border-gray-100/70 shadow-sm bg-gray-50 ">
+          <!-- Bagian Frame Foto Cover (Diseragamkan rounded-xl agar pas di dalam card rounded-2xl) -->
+          <div class="relative aspect-[16/10] overflow-hidden rounded-xl mb-5 border border-gray-100 bg-gray-100">
             <img 
               :src="getThumbnailUrl(item)" 
               :alt="item.title"
-              class="w-full h-full object-cover group-hover:scale-103 transition-transform duration-500" 
+              class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
               loading="lazy"
             />
             <!-- Badge Kategori Mengambang -->
-            <span class="absolute top-3 left-3 bg-white/95 text-[#00a9c3] text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded shadow-sm border border-gray-100">
+            <span class="absolute top-3 left-3 bg-white/95 text-[#00a9c3] text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-md shadow-sm border border-gray-100 backdrop-blur-sm">
               New
             </span>
           </div>
 
           <!-- Bagian Teks Konten -->
-          <div class="flex flex-col flex-1">
-            <!-- Judul Artikel -->
-            <h3 class="text-base sm:text-lg font-bold text-gray-900 mb-2.5 line-clamp-2 group-hover:text-[#00a9c3] transition-colors duration-200 leading-snug tracking-tight">
-              <NuxtLink :to="`/articles/${item.slug}`">
-                {{ item.title }}
-              </NuxtLink>
-            </h3>
+          <div class="flex flex-col flex-1 justify-between">
+            <div>
+              <!-- Judul Artikel -->
+              <h3 class="text-base sm:text-lg font-bold text-gray-900 mb-2.5 line-clamp-2 group-hover:text-[#00a9c3] transition-colors duration-200 leading-snug tracking-tight">
+                <NuxtLink :to="`/articles/${item.slug}`">
+                  {{ item.title }}
+                </NuxtLink>
+              </h3>
 
-            <!-- Cuplikan Isi Deskripsi -->
-            <p class="text-gray-500 text-sm leading-relaxed mb-5 line-clamp-2">
-              {{ stripHtml(item.content || item.description) }}
-            </p>
+              <!-- Cuplikan Isi Deskripsi -->
+              <p class="text-gray-500 text-sm leading-relaxed mb-6 line-clamp-2">
+                {{ stripHtml(item.content || item.description) }}
+              </p>
+            </div>
 
             <!-- Tombol Baca Selengkapnya -->
             <NuxtLink 
               :to="`/articles/${item.slug}`" 
-              class="text-xs font-bold text-[#00a9c3] hover:text-[#0092a8] inline-flex items-center gap-1 mt-auto group/btn w-fit"
+              class="text-xs font-bold text-[#00a9c3] hover:text-[#0092a8] inline-flex items-center gap-1 mt-auto group/btn w-fit pt-3 border-t border-gray-50 w-full justify-between"
             >
-              Read More
-              <svg class="w-3 h-3 transform group-hover/btn:translate-x-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <span>Read More</span>
+              <svg class="w-3.5 h-3.5 transform group-hover/btn:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
               </svg>
             </NuxtLink>

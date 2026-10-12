@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany; // <--- WAJIB TAMBAHKAN INI
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Customer extends Model
@@ -28,8 +29,20 @@ class Customer extends Model
         'current_debt',
     ];
 
+    /**
+     * RELASI KE LOGIN USER
+     */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * RELASI KE PESANAN (BARU DITAMBAHKAN)
+     * Gunanya agar kita bisa menghitung total hutang dari riwayat belanja
+     */
+    public function orders(): HasMany
+    {
+        return $this->hasMany(Order::class);
     }
 }
