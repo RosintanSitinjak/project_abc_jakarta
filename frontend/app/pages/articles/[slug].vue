@@ -1,7 +1,7 @@
 <template>
   <div class="min-h-screen bg-gray-50/30 py-16 px-4 sm:px-6 relative overflow-hidden">
     <!-- Elemen Dekoratif Halus Latar Belakang -->
-    <div class="absolute top-0 right-0 w-96 h-96 bg-[#00a9c3]/5 rounded-full blur-3xl -z-10"></div>
+    <div class="absolute top-0 right-0 w-96 h-96 bg-[#00a9c3]/2 rounded-full blur-3xl -z-10"></div>
     <div class="absolute bottom-1/2 left-0 w-72 h-72 bg-gray-200/40 rounded-full blur-3xl -z-10"></div>
 
     <!-- State: Loading -->
@@ -11,7 +11,7 @@
     </div>
 
     <!-- State: Artikel Ditemukan -->
-    <article v-else-if="article" class="max-w-3xl mx-auto bg-white rounded-3xl p-6 sm:p-10 shadow-sm border border-gray-100 relative z-10">
+    <article v-else-if="article" class="max-w-3xl mx-auto bg-[#00a9c3]/5 rounded-3xl p-6 sm:p-10 shadow-sm border border-gray-100 relative z-10">
       <!-- Tombol Kembali Bergaya Minimalis -->
       <NuxtLink 
         to="/articles" 
@@ -52,7 +52,7 @@
         </div>
       </div>
 
-      <!-- Hero Gambar Thumbnail Utama -->
+      
       <div v-if="article.thumbnailUrl" class="my-8 aspect-[16/9] sm:aspect-[21/9] rounded-2xl overflow-hidden bg-gray-100 border border-gray-200/60 shadow-inner group">
         <img 
           :src="article.thumbnailUrl" 
