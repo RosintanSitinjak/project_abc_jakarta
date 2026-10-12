@@ -3,23 +3,33 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
 
 class Attachment extends Model
 {
-    use HasUuids;
+    use HasFactory, HasUuids;
+
     protected $keyType = 'string';
     public $incrementing = false;
 
-    protected $fillable = ['attachmentable_id', 'attachmentable_type', 'name', 'path', 'type'];
+    protected $fillable = [
+        'path',
+        'name',
+        'mime_type',
+        'size',
+        'attachmentable_id',
+        'attachmentable_type',
+        'type',
+    ];
 
-    // --- BUMBU RAHASIA (ACCESSOR) ---
-    // Setiap kali Nuxt panggil data, otomatis ada kolom 'url' yang berisi link gambar
-    protected $appends = ['url'];
-
-    public function getUrlAttribute()
+    /**
+     * RELASI POLIMORFIS (INI YANG HILANG)
+     * Agar satu tabel attachment bisa dipakai oleh Book, Article, dan Order.
+     */
+    public function attachmentable(): MorphTo
     {
-        return asset('storage/' . $this->path);
+        return $this->morphTo();
     }
 }

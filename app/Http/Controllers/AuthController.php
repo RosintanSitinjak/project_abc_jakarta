@@ -16,13 +16,14 @@ use Illuminate\Validation\ValidationException;
 class AuthController extends Controller
 {
     /**
-     * Fungsi Login (Sesuai Code Awal)
+     * Fungsi Login dengan Proteksi Status (Pending/Suspended)
      */
     public function login(LoginRequest $request): JsonResponse
     {
         $credentials = $request->validated();
         $remember = (bool) ($credentials['remember'] ?? false);
 
+        // 1. Cek Autentikasi Email & Password
         if (!Auth::attempt([
             'email' => $credentials['email'],
             'password' => $credentials['password'],
@@ -32,15 +33,44 @@ class AuthController extends Controller
             ]);
         }
 
+        // 2. AMBIL DATA USER SETELAH AUTH BERHASIL
+        $user = Auth::user();
+
+        // 3. LOGIKA PENGAMAN STATUS (PENTING!)
+        // Cek apakah user ini memiliki profil customer (Pelanggan)
+        if ($user->customer) {
+            
+            // Jika akun DIBLOKIR (Suspended)
+            if ($user->customer->status === 'suspended') {
+                Auth::guard('web')->logout(); // Keluarkan kembali dari session
+                $request->session()->invalidate();
+                $request->session()->regenerateToken();
+
+                throw ValidationException::withMessages([
+                    'email' => ['Akun Anda telah dinonaktifkan. Silakan hubungi Admin ABC Jakarta.'],
+                ]);
+            }
+
+            // Jika akun masih PENDING (Khusus Penginjil yang baru daftar)
+            if ($user->customer->status === 'pending') {
+                Auth::guard('web')->logout(); // Keluarkan kembali dari session
+                $request->session()->invalidate();
+                $request->session()->regenerateToken();
+
+                throw ValidationException::withMessages([
+                    'email' => ['Akun Anda sedang dalam proses verifikasi Admin. Mohon tunggu informasi selanjutnya.'],
+                ]);
+            }
+        }
+
+        // 4. JIKA LOLOS VALIDASI (STATUS AKTIF), REGENERATE SESSION
         $request->session()->regenerate();
 
-        // Mengembalikan data user beserta detail pelanggannya jika ada
-        return response()->json($request->user()->load('customer'));
+        return response()->json($user->load('customer'));
     }
 
     /**
-     * FITUR BARU: Registrasi Pelanggan Mandiri
-     * Mendukung 4 tipe: jemaat, gereja, sekolah, penginjil
+     * Registrasi Pelanggan Mandiri
      */
     public function register(Request $request): JsonResponse
     {
@@ -52,23 +82,23 @@ class AuthController extends Controller
         ]);
 
         return DB::transaction(function () use ($request) {
-            // 1. Buat User (Otomatis Role Pelanggan / Angka 3)
+            // 1. Buat User (Role 3 = Pelanggan)
             $user = User::create([
                 'name'     => $request->name,
                 'email'    => $request->email,
                 'password' => Hash::make($request->password),
-                'role'     => Role::Pelanggan, // Pastikan di Enum Role::Pelanggan adalah 3
+                'role'     => Role::Pelanggan, 
             ]);
 
-            // 2. Logika Status & Limit Kredit berdasarkan Tipe
-            $status = 'approved';
+            // 2. Logika Status Awal & Limit Kredit
+            $status = 'approved'; // Jemaat umum langsung aktif
             $limit  = 0;
 
             if ($request->type === 'penginjil') {
-                $status = 'pending'; // Wajib diverifikasi Admin Intan dulu
-                $limit  = 5000000;   // Set plafon awal 5jt
+                $status = 'pending'; // Penginjil wajib dicek Intan (Admin) dulu
+                $limit  = 5000000;   
             } elseif ($request->type === 'gereja' || $request->type === 'sekolah') {
-                $limit  = 10000000;  // Contoh limit awal untuk institusi
+                $limit  = 10000000;  
             }
 
             // 3. Buat Data Detail Pelanggan
@@ -82,7 +112,7 @@ class AuthController extends Controller
 
             return response()->json([
                 'message' => $request->type === 'penginjil' 
-                    ? 'Pendaftaran berhasil. Mohon tunggu verifikasi Admin untuk mengaktifkan harga khusus PL.' 
+                    ? 'Pendaftaran berhasil. Akun Anda sedang diverifikasi oleh Admin.' 
                     : 'Pendaftaran berhasil! Silakan login.'
             ], 201);
         });

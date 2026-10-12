@@ -1,63 +1,77 @@
 <template>
   <AdminShell>
     <section class="glass-panel p-4 sm:p-6">
-      <!-- HEADER -->
       <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
         <div class="min-w-0">
           <h2 class="text-xl font-bold text-[#1B293C]">Katalog Buku</h2>
-          <p class="text-sm text-slate-500">Kelola informasi literatur, stok, dan gambar sampul buku.</p>
+          <p class="text-sm text-slate-500">Kelola informasi literatur dan ajukan penambahan stok.</p>
         </div>
-        <div class="flex flex-col sm:flex-row gap-3">
-          <el-input v-model="searchQuery" placeholder="Cari judul atau penulis..." clearable class="w-full sm:w-64">
+        <div class="flex flex-wrap items-center gap-2">
+          <el-button :type="lowStockOnly ? 'danger' : 'info'" :plain="!lowStockOnly" @click="toggleLowStock" class="!rounded-xl">
+            <Icon icon="solar:bell-bing-bold" class="mr-1" /> {{ lowStockOnly ? 'Semua Buku' : 'Stok Kritis' }}
+          </el-button>
+
+          <el-select v-model="filterCategory" placeholder="Semua Kategori" clearable class="w-40" @change="loadData">
+            <el-option v-for="c in categories" :key="c.id" :label="c.name" :value="c.id" />
+          </el-select>
+
+          <el-input v-model="searchQuery" placeholder="Cari..." clearable class="w-52" @keyup.enter="loadData" @clear="loadData">
             <template #prefix><Icon icon="solar:magnifer-linear" /></template>
           </el-input>
-          <el-button type="primary" color="#00A9C3" @click="openCreate">
-            + Tambah Buku
-          </el-button>
+          
+          <el-button type="warning" plain @click="handleExport"><Icon icon="solar:printer-minimalistic-bold" /></el-button>
+          <el-button type="primary" color="#00A9C3" @click="openCreate">+ Tambah</el-button>
         </div>
       </div>
 
-      <!-- TABEL DAFTAR BUKU -->
       <div class="mt-6 overflow-x-auto">
-        <el-table :data="books" v-loading="loading" stripe border class="w-full rounded-xl overflow-hidden">
-          <el-table-column label="Gambar" width="100" align="center">
+        <el-table :data="books" v-loading="loading" stripe border class="w-full rounded-xl overflow-hidden text-xs">
+          <!-- KOLOM GAMBAR -->
+          <el-table-column label="Gambar" width="90" align="center">
             <template #default="{ row }">
               <el-image 
                 v-if="row.image_url" 
                 :src="row.image_url" 
-                class="h-12 w-8 rounded shadow-sm" 
-                fit="cover" 
-              />
-              <Icon v-else icon="solar:book-2-linear" class="text-2xl text-slate-200" />
+                class="h-12 w-8 rounded shadow-sm object-cover" 
+                fit="cover"
+                :preview-src-list="[row.image_url]"
+                preview-teleported
+              >
+                <template #error>
+                  <div class="flex items-center justify-center h-full w-full bg-slate-100 rounded text-slate-400">
+                    <Icon icon="solar:book-2-linear" class="text-xl" />
+                  </div>
+                </template>
+              </el-image>
+              <Icon v-else icon="solar:book-2-linear" class="text-2xl text-slate-300" />
             </template>
           </el-table-column>
           
-          <el-table-column prop="title" label="Judul Buku" min-width="200" />
-          <el-table-column prop="author" label="Penulis" width="150" />
+          <el-table-column prop="title" label="Judul Buku" min-width="220" />
           
-          <el-table-column label="Stok" width="100" align="center">
+          <el-table-column label="Stok" width="90" align="center">
             <template #default="{ row }">
-              <el-tag :type="row.stock <= row.rop_point ? 'danger' : 'success'" effect="dark">
-                {{ row.stock }}
-              </el-tag>
+              <el-tag :type="row.stock <= row.rop_point ? 'danger' : 'success'" effect="dark" class="font-bold">{{ row.stock }}</el-tag>
             </template>
           </el-table-column>
 
-          <el-table-column label="Harga (Rp)" width="150">
+          <el-table-column label="Harga (Umum / PL)" width="180">
             <template #default="{ row }">
-              Rp {{ new Intl.NumberFormat('id-ID').format(row.price) }}
+              <div class="text-[11px]">
+                <div class="flex justify-between"><span>Umum:</span><span class="font-bold text-slate-700">Rp{{ formatPrice(row.price) }}</span></div>
+                <div class="flex justify-between text-[#00A9C3] font-bold"><span>PL:</span><span>Rp{{ formatPrice(row.member_price) }}</span></div>
+              </div>
             </template>
           </el-table-column>
 
-          <el-table-column label="Aksi" width="120" align="center">
+          <el-table-column label="Aksi" width="150" align="center">
             <template #default="{ row }">
               <div class="flex justify-center gap-1">
-                <el-button circle size="small" type="primary" plain @click="openEdit(row)">
-                  <Icon icon="solar:pen-2-bold" />
-                </el-button>
-                <el-button circle size="small" type="danger" plain @click="confirmDelete(row)">
-                  <Icon icon="solar:trash-bin-trash-bold" />
-                </el-button>
+                <el-tooltip content="Ajukan Restock ke Pimpinan" placement="top">
+                  <el-button circle size="small" type="success" @click="openRestock(row)"><Icon icon="solar:add-circle-bold" /></el-button>
+                </el-tooltip>
+                <el-button circle size="small" type="primary" plain @click="openEdit(row)"><Icon icon="solar:pen-2-bold" /></el-button>
+                <el-button circle size="small" type="danger" plain @click="confirmDelete(row)"><Icon icon="solar:trash-bin-trash-bold" /></el-button>
               </div>
             </template>
           </el-table-column>
@@ -65,80 +79,74 @@
       </div>
     </section>
 
-    <!-- FORM DIALOG LENGKAP -->
-    <el-dialog v-model="isDialogOpen" :title="isEditing ? 'Edit Informasi Buku' : 'Tambah Buku Baru'" width="800px" top="5vh">
-      <el-form :model="form" label-position="top">
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          
-          <!-- SISI KIRI: DATA TEKNIS -->
-          <div class="space-y-4">
-            <el-form-item label="Judul Buku" required>
-              <el-input v-model="form.title" placeholder="Contoh: Sejarah Para Nabi" />
-            </el-form-item>
+    <!-- MODAL AJUKAN RESTOCK -->
+    <el-dialog v-model="isRestockOpen" title="Ajukan Penambahan Stok" width="400px" align-center append-to-body>
+      <div v-if="selectedBook" class="mb-4 p-4 bg-slate-50 rounded-2xl border border-slate-100">
+        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Buku yang diajukan:</p>
+        <h3 class="font-black text-[#1B293C]">{{ selectedBook.title }}</h3>
+        <p class="text-xs text-slate-500 mt-1">Stok Gudang Saat Ini: <b>{{ selectedBook.stock }}</b></p>
+      </div>
+      <el-form label-position="top">
+        <el-form-item label="Jumlah yang ingin dipesan ke IPH" required>
+          <el-input-number v-model="restockQty" :min="1" class="!w-full" @keyup.enter="submitRestock" />
+          <p class="text-[9px] text-orange-500 mt-2 italic">* Permintaan akan dikirim ke menu Manajemen Restock untuk disetujui Pak Andi</p>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="isRestockOpen = false">Batal</el-button>
+        <el-button type="primary" color="#00A9C3" @click="submitRestock" :loading="loadingRestock">Kirim Pengajuan</el-button>
+      </template>
+    </el-dialog>
 
+    <!-- MODAL EDIT / TAMBAH BUKU -->
+    <el-dialog v-model="isDialogOpen" :title="isEditing ? 'Edit Buku' : 'Tambah Buku'" width="800px" top="5vh">
+       <el-form :model="form" label-position="top">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div class="space-y-4">
+            <el-form-item label="Judul Buku" required><el-input v-model="form.title" /></el-form-item>
             <el-form-item label="Kategori" required>
-              <el-select v-model="form.category_id" placeholder="Pilih Kategori" class="w-full">
+              <el-select v-model="form.category_id" class="w-full">
                 <el-option v-for="c in categories" :key="c.id" :label="c.name" :value="c.id" />
               </el-select>
             </el-form-item>
-
             <div class="grid grid-cols-2 gap-4">
-              <el-form-item label="Penulis">
-                <el-input v-model="form.author" />
-              </el-form-item>
-              <el-form-item label="ISBN">
-                <el-input v-model="form.isbn" />
-              </el-form-item>
+              <el-form-item label="Penulis"><el-input v-model="form.author" /></el-form-item>
+              <el-form-item label="ISBN"><el-input v-model="form.isbn" @keyup.enter="submitForm" /></el-form-item>
             </div>
-
             <div class="grid grid-cols-2 gap-4">
-              <el-form-item label="Harga Umum (Rp)" required>
-                <el-input-number v-model="form.price" :min="0" class="!w-full" />
-              </el-form-item>
-              <el-form-item label="Harga PL (Rp)">
-                <el-input-number v-model="form.member_price" :min="0" class="!w-full" />
-              </el-form-item>
+              <el-form-item label="Harga Umum"><el-input-number v-model="form.price" class="!w-full" /></el-form-item>
+              <el-form-item label="Harga PL"><el-input-number v-model="form.member_price" class="!w-full" @keyup.enter="submitForm" /></el-form-item>
             </div>
-
             <div class="grid grid-cols-2 gap-4">
-              <el-form-item label="Stok Gudang" required>
-                <el-input-number v-model="form.stock" :min="0" class="!w-full" />
-              </el-form-item>
-              <el-form-item label="Batas ROP (Waspada)">
-                <el-input-number v-model="form.rop_point" :min="0" class="!w-full" />
-              </el-form-item>
+              <el-form-item label="Stok"><el-input-number v-model="form.stock" class="!w-full" /></el-form-item>
+              <el-form-item label="Batas ROP"><el-input-number v-model="form.rop_point" class="!w-full" @keyup.enter="submitForm" /></el-form-item>
             </div>
           </div>
-
-          <!-- SISI KANAN: KONTEN & GAMBAR -->
+          
           <div class="space-y-4">
-            <el-form-item label="Gambar Sampul" required>
-              <el-upload
-                action="#"
-                list-type="picture-card"
-                :auto-upload="false"
-                :limit="1"
+            <el-form-item label="Gambar Sampul">
+              <el-upload 
+                action="#" 
+                list-type="picture-card" 
+                :auto-upload="false" 
+                :limit="1" 
                 accept="image/*"
-                v-model:file-list="imageFiles"
-                :on-change="handleImageChange"
+                v-model:file-list="imageFiles" 
+                :on-change="handleImageChange" 
                 :on-remove="handleImageRemove"
               >
-                <Icon icon="solar:camera-add-linear" class="text-2xl" />
+                <Icon icon="solar:camera-add-linear" class="text-2xl text-slate-400" />
               </el-upload>
             </el-form-item>
-
-            <el-form-item label="Sinopsis / Deskripsi Buku">
-              <el-input v-model="form.description" type="textarea" :rows="8" placeholder="Tulis ringkasan isi buku di sini..." />
+            <el-form-item label="Sinopsis">
+              <el-input v-model="form.description" type="textarea" :rows="8" />
             </el-form-item>
           </div>
         </div>
       </el-form>
-
       <template #footer>
         <el-button @click="isDialogOpen = false">Batal</el-button>
-        <el-button type="primary" color="#00A9C3" :loading="loadingSave" @click="submitForm">
-          Simpan ke Katalog
-        </el-button>
+        <el-button type="primary" color="#00A9C3" @click="submitForm" :loading="loadingSave">Simpan</el-button>
       </template>
     </el-dialog>
   </AdminShell>
@@ -146,89 +154,203 @@
 
 <script lang="ts" setup>
 import { Icon } from "@iconify/vue";
-import { ElMessage, ElMessageBox } from 'element-plus';
-import { onMounted, reactive, ref, watch } from 'vue';
+import { ElMessage, ElMessageBox, ElNotification } from 'element-plus';
+import { onMounted, reactive, ref } from 'vue';
+import { useRoute } from 'vue-router';
 import AdminShell from '~/components/Admin/Shell.vue';
 import { useApi } from '~/composables/useApi';
 
-const { apiFetch, unwrap, uploadAttachment } = useApi();
-const books = ref([]);
-const categories = ref([]);
-const loading = ref(false);
-const loadingSave = ref(false);
-const isDialogOpen = ref(false);
-const isEditing = ref(false);
-const editingId = ref(null);
-const searchQuery = ref('');
-const imageFiles = ref([]);
+const route = useRoute();
+const { apiFetch, uploadAttachment } = useApi();
 
-const form = reactive({
-  title: '', category_id: null, author: '', isbn: '',
-  price: 0, member_price: 0, stock: 0, rop_point: 10,
-  description: '', thumbnail_id: null
-});
+const books = ref([]); 
+const categories = ref([]); 
+const loading = ref(false); 
+const searchQuery = ref(''); 
+const filterCategory = ref(route.query.category_id || null); 
+const lowStockOnly = ref(false); 
+const isRestockOpen = ref(false); 
+const loadingRestock = ref(false); 
+const selectedBook = ref(null); 
+const restockQty = ref(1);
+
+const formatPrice = (val: any) => new Intl.NumberFormat('id-ID').format(val || 0);
 
 const loadData = async () => {
   loading.value = true;
   try {
-    const [bRes, cRes] = await Promise.all([
-      apiFetch(`/books?search=${searchQuery.value}`),
-      apiFetch('/categories')
-    ]);
-    books.value = bRes.data || bRes;
+    const params = new URLSearchParams();
+    if (searchQuery.value) params.append('search', searchQuery.value);
+    if (filterCategory.value) params.append('category_id', String(filterCategory.value));
+    if (lowStockOnly.value) params.append('low_stock', 'true');
+    const [bRes, cRes] = await Promise.all([apiFetch(`/books?${params.toString()}`), apiFetch('/categories')]);
+    books.value = bRes.data || bRes; 
     categories.value = cRes.data || cRes;
-  } finally { loading.value = false; }
+  } finally { 
+    loading.value = false; 
+  }
 };
 
-const handleImageChange = async (file) => {
+const openRestock = (row: any) => { 
+  selectedBook.value = row; 
+  restockQty.value = 50; 
+  isRestockOpen.value = true; 
+};
+
+const submitRestock = async () => {
+  if (!restockQty.value || restockQty.value < 1) {
+    return ElMessage.warning('Masukkan jumlah stok yang valid.');
+  }
+
+  loadingRestock.value = true;
+  try {
+    await apiFetch('/restock-requests', { 
+        method: 'POST', 
+        body: { 
+            book_id: selectedBook.value.id, 
+            quantity: restockQty.value, 
+            note: 'Stok kritis, mohon penambahan.' 
+        } 
+    });
+    
+    ElNotification({
+      title: 'Pengajuan Berhasil',
+      message: 'Permintaan telah masuk ke daftar tunggu Pak Andi.',
+      type: 'success'
+    });
+
+    isRestockOpen.value = false;
+    loadData(); 
+  } catch (e: any) {
+    const msg = e.data?.message || 'Gagal mengirim pengajuan.';
+    ElMessage.error(msg);
+  } finally {
+    loadingRestock.value = false;
+  }
+};
+
+const toggleLowStock = () => { 
+  lowStockOnly.value = !lowStockOnly.value; 
+  loadData(); 
+};
+
+// CRUD LOGIC
+const isDialogOpen = ref(false); 
+const isEditing = ref(false); 
+const editingId = ref(null); 
+const loadingSave = ref(false); 
+const imageFiles = ref([]);
+
+const form = reactive({ 
+  title: '', 
+  category_id: null, 
+  author: '', 
+  isbn: '', 
+  price: 0, 
+  member_price: 0, 
+  stock: 0, 
+  rop_point: 10, 
+  description: '', 
+  thumbnail_id: null 
+});
+
+const openCreate = () => { 
+  isEditing.value = false; 
+  editingId.value = null;
+  Object.assign(form, { 
+    title: '', 
+    category_id: null, 
+    author: '', 
+    isbn: '', 
+    price: 0, 
+    member_price: 0, 
+    stock: 0, 
+    rop_point: 10, 
+    description: '', 
+    thumbnail_id: null 
+  }); 
+  imageFiles.value = []; // Reset preview upload
+  isDialogOpen.value = true; 
+};
+
+const openEdit = (row: any) => { 
+  isEditing.value = true; 
+  editingId.value = row.id; 
+  Object.assign(form, { ...row }); 
+  
+  // Set ID thumbnail agar tidak hilang saat disimpan
+  form.thumbnail_id = row.thumbnail?.id || null;
+
+  // Tampilkan preview gambar yang sudah tersimpan sebelumnya
+  imageFiles.value = row.image_url 
+    ? [{ name: row.title || 'thumbnail', url: row.image_url }] 
+    : [];
+
+  isDialogOpen.value = true; 
+};
+
+const handleImageChange = async (file: any) => { 
   if (!file.raw) return;
   try {
-    const attachment = await uploadAttachment(file.raw, { attachmentableType: 'App\\Models\\Book', type: 'thumbnail' });
-    form.thumbnail_id = attachment.id;
-    ElMessage.success('Gambar terunggah');
-  } catch (e) { ElMessage.error('Gagal unggah gambar'); }
+    const res = await uploadAttachment(file.raw, { 
+      attachmentableType: 'App\\Models\\Book', 
+      type: 'thumbnail' 
+    }); 
+    
+    // Simpan id attachment yang berhasil di-upload
+    form.thumbnail_id = res?.data?.id || res?.id;
+    ElMessage.success('Gambar buku berhasil diunggah');
+  } catch (error) {
+    imageFiles.value = [];
+    ElMessage.error('Gagal mengunggah gambar buku');
+  }
 };
 
-const handleImageRemove = () => { form.thumbnail_id = null; imageFiles.value = []; };
-
-const openCreate = () => {
-  isEditing.value = false;
-  Object.assign(form, { title: '', category_id: null, author: '', isbn: '', price: 0, member_price: 0, stock: 0, rop_point: 10, description: '', thumbnail_id: null });
+const handleImageRemove = () => { 
+  form.thumbnail_id = null; 
   imageFiles.value = [];
-  isDialogOpen.value = true;
 };
 
-const openEdit = (row) => {
-  isEditing.value = true;
-  editingId.value = row.id;
-  Object.assign(form, { ...row });
-  imageFiles.value = row.image_url ? [{ url: row.image_url }] : [];
-  isDialogOpen.value = true;
+const submitForm = async () => { 
+  loadingSave.value = true; 
+  try { 
+    await apiFetch(isEditing.value ? `/books/${editingId.value}` : '/books', { 
+      method: isEditing.value ? 'PUT' : 'POST', 
+      body: form 
+    }); 
+    ElMessage.success('Data buku berhasil disimpan!'); 
+    isDialogOpen.value = false; 
+    await loadData(); 
+  } catch (e: any) { 
+    ElNotification({ 
+      title: 'Error', 
+      message: e.data?.message || 'Gagal menyimpan data buku', 
+      type: 'error' 
+    }); 
+  } finally { 
+    loadingSave.value = false; 
+  } 
 };
 
-const submitForm = async () => {
-  if(!form.title || !form.category_id) return ElMessage.warning('Judul dan Kategori wajib diisi');
-  loadingSave.value = true;
-  try {
-    const method = isEditing.value ? 'PUT' : 'POST';
-    const url = isEditing.value ? `/books/${editingId.value}` : '/books';
-    await apiFetch(url, { method, body: form });
-    ElMessage.success('Katalog berhasil diperbarui');
-    isDialogOpen.value = false;
-    loadData();
-  } catch (e) { ElMessage.error('Gagal menyimpan data'); }
-  finally { loadingSave.value = false; }
+const handleExport = () => window.open('http://localhost:8000/api/books/export/pdf', '_blank');
+
+const confirmDelete = async (row: any) => { 
+  await ElMessageBox.confirm(`Hapus buku "${row.title}"?`, 'Konfirmasi', {
+    confirmButtonText: 'Ya, Hapus',
+    cancelButtonText: 'Batal',
+    type: 'warning'
+  }); 
+  await apiFetch(`/books/${row.id}`, { method: 'DELETE' }); 
+  ElMessage.success('Buku berhasil dihapus');
+  loadData(); 
 };
 
-const confirmDelete = async (row) => {
-  try {
-    await ElMessageBox.confirm(`Hapus buku ${row.title}?`, 'Peringatan', { type: 'warning' });
-    await apiFetch(`/books/${row.id}`, { method: 'DELETE' });
-    ElMessage.success('Terhapus');
-    loadData();
-  } catch (e) {}
-};
-
-watch(searchQuery, () => loadData());
 onMounted(loadData);
 </script>
+
+<style scoped>
+@reference "tailwindcss";
+.glass-panel { 
+  @apply bg-white rounded-[2rem] border border-slate-100 shadow-sm; 
+}
+</style>

@@ -10,11 +10,10 @@ use Illuminate\Support\Str;
 class CategoryController extends Controller
 {
     /**
-     * Tampil Daftar Kategori dengan Fitur Pencarian & Hitung Jumlah Buku
+     * Menampilkan daftar kategori dengan jumlah buku aktif
      */
     public function index(Request $request): JsonResponse
     {
-        // withCount('books') akan menambahkan kolom virtual 'books_count' secara otomatis
         $query = Category::query()->withCount('books');
 
         if ($request->filled('search')) {
@@ -25,43 +24,68 @@ class CategoryController extends Controller
         return response()->json($query->latest()->get());
     }
 
+    /**
+     * Menambah kategori baru
+     */
     public function store(Request $request): JsonResponse
     {
         $request->validate([
-            'name' => 'required|string|max:255',
+            'name'        => 'required|string|max:255|unique:categories,name',
             'description' => 'nullable|string'
+        ], [
+            'name.required' => 'Nama kategori wajib diisi.',
+            'name.unique'   => 'Nama kategori ini sudah terdaftar.',
         ]);
 
         $category = Category::create([
-            'name' => $request->name,
-            'slug' => Str::slug($request->name) . '-' . rand(100, 999),
+            'name'        => $request->name,
+            'slug'        => Str::slug($request->name) . '-' . rand(100, 999),
             'description' => $request->description,
         ]);
 
         return response()->json($category, 201);
     }
 
+    /**
+     * Mengubah data kategori
+     */
     public function update(Request $request, Category $category): JsonResponse
     {
         $request->validate([
-            'name' => 'required|string|max:255',
+            'name'        => 'required|string|max:255|unique:categories,name,' . $category->id,
             'description' => 'nullable|string'
+        ], [
+            'name.required' => 'Nama kategori wajib diisi.',
+            'name.unique'   => 'Nama kategori ini sudah terdaftar.',
         ]);
 
+        // Perbarui slug hanya jika nama kategori berubah
+        $slug = ($category->name !== $request->name) 
+            ? Str::slug($request->name) . '-' . rand(100, 999) 
+            : $category->slug;
+
         $category->update([
-            'name' => $request->name,
-            'slug' => Str::slug($request->name) . '-' . rand(100, 999),
+            'name'        => $request->name,
+            'slug'        => $slug,
             'description' => $request->description,
         ]);
 
         return response()->json($category);
     }
 
+    /**
+     * Menghapus kategori dengan pengaman integritas data buku
+     */
     public function destroy(Category $category): JsonResponse
     {
-        // Karena ada relasi, di skripsi bisa dijelaskan: 
-        // Menggunakan SoftDeletes agar data histori buku tetap aman.
+        // Proteksi: cegah penghapusan jika kategori masih digunakan oleh buku
+        if ($category->books()->count() > 0) {
+            return response()->json([
+                'message' => "Gagal menghapus! Kategori '{$category->name}' masih memiliki koleksi buku aktif. Silakan pindahkan atau hapus buku terkait terlebih dahulu."
+            ], 422);
+        }
+
         $category->delete();
-        return response()->json(['status' => 'deleted']);
+        return response()->json(['status' => 'deleted', 'message' => 'Kategori berhasil dihapus.']);
     }
 }
