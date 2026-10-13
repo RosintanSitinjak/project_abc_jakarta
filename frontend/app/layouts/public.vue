@@ -11,7 +11,7 @@ const handleLogout = async () => {
   }
 }
 
-// 2. Navigasi Header
+
 const navLinks = [
   { name: 'Beranda', path: '/' },
   { name: 'Katalog', path: '/katalog' },
@@ -19,7 +19,7 @@ const navLinks = [
   { name: 'Hubungi kami', path: '/contact' }
 ]
 
-// 3. Data untuk Footer (Quick Links & Sosmed)
+
 const quickLinks = [
   { name: 'Home', path: '/' },
   { name: 'Services', path: '/services' },
