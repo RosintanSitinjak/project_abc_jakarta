@@ -163,7 +163,7 @@
     <!-- DIALOG 1: INPUT PESANAN BARU (ASSISTED ORDER) -->
     <el-dialog 
       v-model="isCreateOpen" 
-      title="Formulir Input Pesanan Baru" 
+      title="Formulir Input Pesanan Baru (Assisted Order)" 
       width="950px" 
       top="5vh" 
       destroy-on-close 
