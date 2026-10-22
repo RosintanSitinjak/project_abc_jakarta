@@ -6,11 +6,14 @@ use App\Models\User;
 use App\Models\Customer;
 use App\Enums\Role;
 use App\Http\Requests\LoginRequest;
+use App\Mail\WelcomeRegistrationMail;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
@@ -33,44 +36,43 @@ class AuthController extends Controller
             ]);
         }
 
-        // 2. AMBIL DATA USER SETELAH AUTH BERHASIL
+        // 2. Ambil data user setelah autentikasi berhasil
         $user = Auth::user();
 
-        // 3. LOGIKA PENGAMAN STATUS (PENTING!)
-        // Cek apakah user ini memiliki profil customer (Pelanggan)
+        // 3. Logika Pengaman Status Akun Pelanggan
         if ($user->customer) {
             
-            // Jika akun DIBLOKIR (Suspended)
+            // Jika akun DIBLOKIR / SUSPENDED
             if ($user->customer->status === 'suspended') {
-                Auth::guard('web')->logout(); // Keluarkan kembali dari session
+                Auth::guard('web')->logout();
                 $request->session()->invalidate();
                 $request->session()->regenerateToken();
 
                 throw ValidationException::withMessages([
-                    'email' => ['Akun Anda telah dinonaktifkan. Silakan hubungi Admin ABC Jakarta.'],
+                    'email' => ['Akun Anda telah dinonaktifkan oleh Admin ABC Jakarta. Silakan hubungi kantor pelayanan.'],
                 ]);
             }
 
-            // Jika akun masih PENDING (Khusus Penginjil yang baru daftar)
+            // Jika akun masih PENDING (Khusus Penginjil Literatur baru)
             if ($user->customer->status === 'pending') {
-                Auth::guard('web')->logout(); // Keluarkan kembali dari session
+                Auth::guard('web')->logout();
                 $request->session()->invalidate();
                 $request->session()->regenerateToken();
 
                 throw ValidationException::withMessages([
-                    'email' => ['Akun Anda sedang dalam proses verifikasi Admin. Mohon tunggu informasi selanjutnya.'],
+                    'email' => ['Akun Penginjil Literatur Anda sedang dalam proses verifikasi Admin ABC Jakarta. Mohon tunggu informasi selanjutnya.'],
                 ]);
             }
         }
 
-        // 4. JIKA LOLOS VALIDASI (STATUS AKTIF), REGENERATE SESSION
+        // 4. Jika lolos validasi (Status Aktif), regenerate session
         $request->session()->regenerate();
 
         return response()->json($user->load('customer'));
     }
 
     /**
-     * Registrasi Pelanggan Mandiri
+     * Registrasi Pelanggan Mandiri + Kirim Email Otomatis
      */
     public function register(Request $request): JsonResponse
     {
@@ -82,8 +84,9 @@ class AuthController extends Controller
             'type'     => 'required|in:jemaat,gereja,sekolah,penginjil',
         ]);
 
-        return DB::transaction(function () use ($request) {
-            // 1. Buat User (Role 3 = Pelanggan)
+        // Simpan data ke Database PostgreSQL
+        $createdData = DB::transaction(function () use ($request) {
+            // 1. Buat Akun User
             $user = User::create([
                 'name'     => $request->name,
                 'email'    => $request->email,
@@ -91,19 +94,19 @@ class AuthController extends Controller
                 'role'     => Role::Pelanggan, 
             ]);
 
-            // 2. Logika Status Awal & Limit Kredit
+            // 2. Logika Status Awal & Limit Plafon Kredit
             $status = 'approved'; // Jemaat umum langsung aktif
             $limit  = 0;
 
             if ($request->type === 'penginjil') {
-                $status = 'pending'; // Penginjil wajib dicek Intan (Admin) dulu
-                $limit  = 5000000;   
+                $status = 'pending'; // Penginjil wajib verifikasi admin
+                $limit  = 5000000;   // Plafon maksimal Rp 5.000.000
             } elseif ($request->type === 'gereja' || $request->type === 'sekolah') {
                 $limit  = 10000000;  
             }
 
-            // 3. Buat Data Detail Pelanggan
-            Customer::create([
+            // 3. Buat Data Profil Pelanggan
+            $customer = Customer::create([
                 'user_id'      => $user->id,
                 'name'         => $request->name,
                 'phone'        => $request->phone,
@@ -112,12 +115,27 @@ class AuthController extends Controller
                 'credit_limit' => $limit,
             ]);
 
-            return response()->json([
-                'message' => $request->type === 'penginjil' 
-                    ? 'Pendaftaran berhasil. Akun Anda sedang diverifikasi oleh Admin.' 
-                    : 'Pendaftaran berhasil! Silakan login.'
-            ], 201);
+            return [
+                'user'     => $user,
+                'customer' => $customer
+            ];
         });
+
+        // 4. KIRIM EMAIL RESMI KE ALAMAT EMAIL PENDAFTAR
+        // Menggunakan try-catch agar jika koneksi SMTP internet terganggu, registrasi akun tetap berhasil
+        try {
+            Mail::to($createdData['user']->email)->send(
+                new WelcomeRegistrationMail($createdData['user'], $createdData['customer'])
+            );
+        } catch (\Throwable $e) {
+            Log::error('Gagal mengirimkan email registrasi: ' . $e->getMessage());
+        }
+
+        return response()->json([
+            'message' => $request->type === 'penginjil' 
+                ? 'Pendaftaran berhasil. Akun Anda sedang diverifikasi Admin. Rincian pendaftaran telah dikirim ke email Anda.' 
+                : 'Pendaftaran berhasil! Konfirmasi akun telah dikirim ke email Anda. Silakan login.'
+        ], 201);
     }
 
     /**
