@@ -99,7 +99,7 @@
         </div>
 
         <!-- ============================================== -->
-        <!-- TAB 2: BUYING (RIWAYAT PESANAN BISA DIKLIK)    -->
+        <!-- TAB 2: BUYING (RIWAYAT PESANAN)                -->
         <!-- ============================================== -->
         <div v-else-if="activeTab === 'buying'" class="space-y-6">
           <div class="flex items-center justify-between">
@@ -127,7 +127,7 @@
             </NuxtLink>
           </div>
 
-          <!-- Daftar Kartu Pesanan (Dibuat Interaktif & Bisa Diklik) -->
+          <!-- Daftar Pesanan -->
           <div v-else class="space-y-4">
             <div 
               v-for="order in orders" 
@@ -240,36 +240,106 @@
         </div>
 
         <!-- ============================================== -->
-        <!-- TAB 4: SETTINGS                                -->
+        <!-- TAB 4: SETTINGS (PROFIL + GANTI PASSWORD LENGKAP) -->
         <!-- ============================================== -->
-        <div v-else-if="activeTab === 'settings'" class="space-y-6">
-          <div>
-            <h2 class="text-base font-black text-gray-900 tracking-tight">Pengaturan Akun</h2>
-            <p class="text-xs text-gray-400 mt-0.5">Perbarui nomor kontak dan alamat pengiriman Anda.</p>
+        <div v-else-if="activeTab === 'settings'" class="space-y-10">
+          
+          <!-- BAGIAN A: KONTAK & ALAMAT PENGIRIMAN -->
+          <div class="space-y-4">
+            <div class="border-b border-gray-100 pb-3">
+              <h2 class="text-base font-black text-gray-900 tracking-tight">1. Informasi Kontak & Pengiriman</h2>
+              <p class="text-xs text-gray-400 mt-0.5">Perbarui nomor WhatsApp dan alamat pengiriman default Anda.</p>
+            </div>
+
+            <form @submit.prevent="handleUpdateProfile" class="max-w-xl space-y-4 text-xs">
+              <div>
+                <label class="block text-gray-700 font-bold mb-1">Nomor WhatsApp</label>
+                <input 
+                  v-model="profileForm.phone" 
+                  type="tel" 
+                  placeholder="Contoh: 081234567890" 
+                  class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-[#00a9c3] outline-none text-xs transition" 
+                />
+              </div>
+              <div>
+                <label class="block text-gray-700 font-bold mb-1">Alamat Lengkap Pengiriman</label>
+                <textarea 
+                  v-model="profileForm.address" 
+                  rows="3" 
+                  placeholder="Nama jalan, nomor rumah, kelurahan, kota..." 
+                  class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-[#00a9c3] outline-none text-xs transition"
+                ></textarea>
+              </div>
+              <button 
+                type="submit" 
+                :disabled="savingProfile" 
+                class="px-6 py-2.5 bg-[#00a9c3] text-white font-bold rounded-xl hover:bg-[#0092a8] active:scale-95 transition disabled:opacity-50"
+              >
+                {{ savingProfile ? 'Menyimpan...' : 'Simpan Kontak & Alamat' }}
+              </button>
+            </form>
           </div>
 
-          <form @submit.prevent="handleUpdateProfile" class="max-w-xl space-y-4 text-xs">
-            <div>
-              <label class="block text-gray-700 font-bold mb-1">Nomor WhatsApp</label>
-              <input v-model="profileForm.phone" type="tel" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 outline-none text-xs" />
+          <!-- BAGIAN B: KEAMANAN & GANTI PASSWORD -->
+          <div class="space-y-4 pt-6 border-t border-gray-200/70">
+            <div class="border-b border-gray-100 pb-3">
+              <h2 class="text-base font-black text-gray-900 tracking-tight">2. Keamanan & Ganti Password</h2>
+              <p class="text-xs text-gray-400 mt-0.5">Pastikan kata sandi baru Anda minimal 8 karakter demi keamanan akun.</p>
             </div>
-            <div>
-              <label class="block text-gray-700 font-bold mb-1">Alamat Lengkap</label>
-              <textarea v-model="profileForm.address" rows="3" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 outline-none text-xs"></textarea>
-            </div>
-            <button type="submit" :disabled="savingProfile" class="px-6 py-2.5 bg-[#00a9c3] text-white font-bold rounded-xl hover:bg-[#0092a8] transition">
-              {{ savingProfile ? 'Menyimpan...' : 'Simpan Perubahan' }}
-            </button>
-          </form>
+
+            <form @submit.prevent="handleChangePassword" class="max-w-xl space-y-4 text-xs">
+              <div>
+                <label class="block text-gray-700 font-bold mb-1">Password Saat Ini <span class="text-rose-500">*</span></label>
+                <input 
+                  v-model="passwordForm.current_password" 
+                  type="password" 
+                  placeholder="Masukkan password lama Anda" 
+                  required
+                  class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-[#00a9c3] outline-none text-xs transition" 
+                />
+              </div>
+
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-gray-700 font-bold mb-1">Password Baru <span class="text-rose-500">*</span></label>
+                  <input 
+                    v-model="passwordForm.password" 
+                    type="password" 
+                    placeholder="Minimal 8 karakter" 
+                    required
+                    minlength="8"
+                    class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-[#00a9c3] outline-none text-xs transition" 
+                  />
+                </div>
+                <div>
+                  <label class="block text-gray-700 font-bold mb-1">Konfirmasi Password Baru <span class="text-rose-500">*</span></label>
+                  <input 
+                    v-model="passwordForm.password_confirmation" 
+                    type="password" 
+                    placeholder="Ulangi password baru" 
+                    required
+                    class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-[#00a9c3] outline-none text-xs transition" 
+                  />
+                </div>
+              </div>
+
+              <button 
+                type="submit" 
+                :disabled="changingPassword" 
+                class="px-6 py-2.5 bg-gray-900 text-white font-bold rounded-xl hover:bg-gray-800 active:scale-95 transition disabled:opacity-50"
+              >
+                {{ changingPassword ? 'Memperbarui...' : 'Perbarui Password' }}
+              </button>
+            </form>
+          </div>
+
         </div>
 
       </div>
 
     </div>
 
-    <!-- ========================================================= -->
-    <!-- MODAL POPUP: STRUK RINCIAN PESANAN & STATUS TRACKING      -->
-    <!-- ========================================================= -->
+    <!-- MODAL POPUP: STRUK RINCIAN PESANAN -->
     <el-dialog 
       v-model="showDetailModal" 
       width="90%" 
@@ -277,16 +347,12 @@
       :show-close="true"
     >
       <div v-if="selectedOrder" class="space-y-6 text-xs text-gray-700 pt-2 pb-2">
-        
-        <!-- Header Struk -->
         <div class="border-b border-gray-200 pb-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <span class="text-[10px] text-[#00a9c3] font-black uppercase tracking-widest block">Faktur Pembelian ABC Jakarta</span>
             <h3 class="text-xl font-black text-gray-900 tracking-wider mt-0.5">{{ selectedOrder.order_number }}</h3>
             <p class="text-gray-400 text-[11px] mt-0.5">Tanggal Pesan: {{ formatDate(selectedOrder.created_at) }}</p>
           </div>
-
-          <!-- Tombol Download Invoice PDF -->
           <a 
             :href="`http://127.0.0.1:8000/api/orders/${selectedOrder.id}/invoice`" 
             target="_blank"
@@ -299,59 +365,29 @@
           </a>
         </div>
 
-        <!-- STATUS TRACKING BAR -->
+        <!-- STATUS TRACKING -->
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-gray-50 p-4 rounded-2xl border border-gray-100">
-          
-          <!-- 1. Status Verifikasi Pembayaran Admin -->
           <div class="space-y-1">
             <span class="text-[10px] uppercase font-bold text-gray-400 tracking-wider block">Verifikasi Pembayaran Admin:</span>
-            <div class="flex items-center gap-2">
-              <span 
-                :class="[
-                  'px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider inline-flex items-center gap-1.5',
-                  getPaymentBadgeClass(selectedOrder)
-                ]"
-              >
-                {{ getPaymentStatusText(selectedOrder) }}
-              </span>
-            </div>
-            <p class="text-[10px] text-gray-400 mt-1">
-              Metode: <b class="uppercase text-gray-700">{{ selectedOrder.payment_method }}</b>
-            </p>
+            <span :class="['px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider inline-flex items-center gap-1.5', getPaymentBadgeClass(selectedOrder)]">
+              {{ getPaymentStatusText(selectedOrder) }}
+            </span>
+            <p class="text-[10px] text-gray-400 mt-1">Metode: <b class="uppercase text-gray-700">{{ selectedOrder.payment_method }}</b></p>
           </div>
-
-          <!-- 2. Status Logistik & Ekspedisi -->
           <div class="space-y-1 sm:border-l sm:pl-4 sm:border-gray-200">
             <span class="text-[10px] uppercase font-bold text-gray-400 tracking-wider block">Status Pengiriman Barang:</span>
-            <div class="flex items-center gap-2">
-              <span 
-                :class="[
-                  'px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider inline-flex items-center gap-1.5',
-                  getShippingBadgeClass(selectedOrder)
-                ]"
-              >
-                {{ getShippingStatusText(selectedOrder) }}
-              </span>
-            </div>
-            
-            <!-- Info Ekspedisi / Resi (Jika Kurir) -->
+            <span :class="['px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider inline-flex items-center gap-1.5', getShippingBadgeClass(selectedOrder)]">
+              {{ getShippingStatusText(selectedOrder) }}
+            </span>
             <div v-if="selectedOrder.shipping_method !== 'pickup'" class="text-[11px] text-gray-600 mt-1">
               <p>Ekspedisi: <b class="text-gray-900">{{ selectedOrder.courier_name || 'Menunggu input admin' }}</b></p>
-              <p class="mt-0.5">
-                No. Resi: 
-                <b v-if="selectedOrder.tracking_number" class="text-[#00a9c3] font-mono select-all">
-                  {{ selectedOrder.tracking_number }}
-                </b>
-                <span v-else class="text-gray-400 italic">Belum terbit</span>
-              </p>
+              <p class="mt-0.5">No. Resi: <b v-if="selectedOrder.tracking_number" class="text-[#00a9c3] font-mono">{{ selectedOrder.tracking_number }}</b><span v-else class="text-gray-400 italic">Belum terbit</span></p>
             </div>
-            <div v-else class="text-[10px] text-gray-500 mt-1 italic">
-              Ambil langsung di kantor ABC Tebet, Jakarta Selatan.
-            </div>
+            <div v-else class="text-[10px] text-gray-500 mt-1 italic">Ambil langsung di kantor ABC Tebet.</div>
           </div>
         </div>
 
-        <!-- FOTO BUKTI TRANSFER PEMBAYARAN -->
+        <!-- FOTO BUKTI TRANSFER -->
         <div class="p-4 rounded-2xl border border-gray-200/80 bg-white space-y-3">
           <div class="flex items-center justify-between">
             <span class="font-bold text-xs text-gray-900">Bukti Transfer Pembayaran</span>
@@ -363,38 +399,18 @@
               {{ selectedOrder.payment_proof ? 'Ganti Foto Struk' : '+ Upload Struk Sekarang' }}
             </button>
           </div>
-
-          <!-- Jika Sudah Upload Foto Struk -->
           <div v-if="getPaymentProofUrl(selectedOrder)" class="flex flex-col sm:flex-row items-center gap-4 bg-gray-50 p-3 rounded-xl border border-gray-100">
             <a :href="getPaymentProofUrl(selectedOrder)" target="_blank" class="shrink-0 group relative overflow-hidden rounded-lg">
-              <img 
-                :src="getPaymentProofUrl(selectedOrder)" 
-                alt="Struk Transfer" 
-                class="w-24 h-24 object-cover border border-gray-200 group-hover:scale-105 transition"
-              />
-              <span class="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-white text-[9px] font-bold">
-                Perbesar
-              </span>
+              <img :src="getPaymentProofUrl(selectedOrder)" alt="Struk Transfer" class="w-24 h-24 object-cover border border-gray-200 group-hover:scale-105 transition" />
             </a>
             <div class="text-xs text-gray-500 space-y-1">
               <p class="font-bold text-gray-900">Foto Struk Pembayaran Terlampir</p>
-              <p class="text-[11px]">Foto ini telah dikirim ke admin untuk dicocokkan dengan rekening koran Bank Mandiri ABC Jakarta.</p>
-              <a :href="getPaymentProofUrl(selectedOrder)" target="_blank" class="text-[11px] text-[#00a9c3] font-bold inline-block hover:underline">
-                Buka Gambar di Tab Baru ↗
-              </a>
+              <a :href="getPaymentProofUrl(selectedOrder)" target="_blank" class="text-[11px] text-[#00a9c3] font-bold inline-block hover:underline">Buka Gambar di Tab Baru ↗</a>
             </div>
           </div>
-
-          <!-- Jika Belum Ada Foto Struk -->
           <div v-else class="p-4 bg-amber-50 rounded-xl border border-amber-200 text-[11px] text-amber-800 flex items-center justify-between">
-            <span>Belum ada bukti pembayaran yang diunggah untuk pesanan ini.</span>
-            <button 
-              v-if="selectedOrder.payment_method === 'transfer'"
-              @click="openUploadDialog(selectedOrder)"
-              class="px-3 py-1 bg-amber-600 text-white rounded-lg font-bold text-[10px]"
-            >
-              Upload
-            </button>
+            <span>Belum ada bukti pembayaran yang diunggah.</span>
+            <button v-if="selectedOrder.payment_method === 'transfer'" @click="openUploadDialog(selectedOrder)" class="px-3 py-1 bg-amber-600 text-white rounded-lg font-bold text-[10px]">Upload</button>
           </div>
         </div>
 
@@ -423,19 +439,17 @@
           </div>
         </div>
 
-        <!-- TOTAL & ALAMAT PENGIRIMAN -->
+        <!-- TOTAL & ALAMAT -->
         <div class="pt-3 border-t border-gray-200 space-y-3">
           <div class="flex justify-between text-xs text-gray-600">
             <span>Alamat Tujuan:</span>
             <span class="font-semibold text-right max-w-xs">{{ selectedOrder.shipping_address || 'Ambil Sendiri di Kantor ABC Tebet' }}</span>
           </div>
-
           <div class="flex justify-between items-center text-sm font-black text-gray-900 pt-2 border-t border-gray-100">
             <span>Total Pembayaran:</span>
             <span class="text-lg font-black text-[#00a9c3]">{{ formatRupiah(selectedOrder.total_amount) }}</span>
           </div>
         </div>
-
       </div>
 
       <template #footer>
@@ -445,47 +459,25 @@
       </template>
     </el-dialog>
 
-    <!-- DIALOG POPUP UNTUK UPLOAD / GANTI BUKTI TRANSFER -->
-    <el-dialog 
-      v-model="showUploadDialog" 
-      title="Upload Bukti Transfer Bank" 
-      width="90%" 
-      class="max-w-md !rounded-3xl"
-    >
+    <!-- DIALOG UPLOAD BUKTI TRANSFER -->
+    <el-dialog v-model="showUploadDialog" title="Upload Bukti Transfer Bank" width="90%" class="max-w-md !rounded-3xl">
       <div v-if="orderToUpload" class="space-y-4 text-xs">
         <div class="p-3.5 bg-gray-50 rounded-2xl border border-gray-100">
           <p class="text-gray-500">Nomor Pesanan: <b class="text-gray-900">{{ orderToUpload.order_number }}</b></p>
           <p class="text-gray-500 mt-1">Total Tagihan: <b class="text-[#00a9c3] text-sm">{{ formatRupiah(orderToUpload.total_amount) }}</b></p>
         </div>
-
         <div>
           <label class="block text-gray-700 font-bold mb-1.5">Pilih Foto Struk Transfer (JPG / PNG):</label>
-          <input 
-            type="file" 
-            accept="image/*" 
-            @change="handleFileChange"
-            class="w-full text-xs text-gray-500 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-[#00a9c3]/10 file:text-[#00a9c3] hover:file:bg-[#00a9c3]/20 cursor-pointer"
-          />
+          <input type="file" accept="image/*" @change="handleFileChange" class="w-full text-xs text-gray-500 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-[#00a9c3]/10 file:text-[#00a9c3] cursor-pointer" />
         </div>
-
-        <!-- Preview Gambar yang Dipilih -->
         <div v-if="previewImage" class="mt-3 text-center">
           <img :src="previewImage" class="max-h-48 mx-auto rounded-xl border border-gray-200 object-contain" />
         </div>
       </div>
-
       <template #footer>
         <div class="flex justify-end gap-2 pt-2">
           <el-button @click="showUploadDialog = false">Batal</el-button>
-          <el-button 
-            type="primary" 
-            :loading="uploadingProof" 
-            :disabled="!selectedFile"
-            class="!bg-[#00a9c3] !border-none font-bold"
-            @click="submitPaymentProof"
-          >
-            Kirim Bukti Pembayaran
-          </el-button>
+          <el-button type="primary" :loading="uploadingProof" :disabled="!selectedFile" class="!bg-[#00a9c3] !border-none font-bold" @click="submitPaymentProof">Kirim Bukti Pembayaran</el-button>
         </div>
       </template>
     </el-dialog>
@@ -588,7 +580,6 @@ const openOrderDetail = (order) => {
   showDetailModal.value = true
 }
 
-// Helper URL Bukti Pembayaran
 const getPaymentProofUrl = (order) => {
   if (!order) return null
   if (order.payment_proof) return order.payment_proof
@@ -601,7 +592,6 @@ const getPaymentProofUrl = (order) => {
   return null
 }
 
-// Badge Status Pembayaran
 const getPaymentStatusText = (order) => {
   if (order.payment_status === 'paid') return 'Lunas (Diverifikasi Admin)'
   if (order.payment_proof_id || order.payment_proof) return 'Menunggu Verifikasi Admin'
@@ -616,7 +606,6 @@ const getPaymentBadgeClass = (order) => {
   return 'bg-rose-50 text-rose-700 border border-rose-200'
 }
 
-// Badge Status Pengiriman Logistik
 const getShippingStatusText = (order) => {
   if (order.shipping_method === 'pickup') {
     return order.shipping_status === 'delivered' ? 'Sudah Diambil di Toko' : 'Siap Diambil di Tebet'
@@ -638,7 +627,7 @@ const getShippingBadgeClass = (order) => {
 }
 
 // ==========================================
-// LOGIKA UPLOAD / GANTI BUKTI TRANSFER
+// UPLOAD BUKTI TRANSFER
 // ==========================================
 const showUploadDialog = ref(false)
 const orderToUpload = ref(null)
@@ -674,20 +663,12 @@ const submitPaymentProof = async () => {
 
     await apiFetch(`/orders/${orderToUpload.value.id}`, {
       method: 'PUT',
-      body: {
-        payment_proof_id: attachment.id
-      }
+      body: { payment_proof_id: attachment.id }
     })
 
     ElMessage.success('Bukti pembayaran berhasil diunggah! Admin akan segera memverifikasinya.')
     showUploadDialog.value = false
-    
-    // Refresh agar data di modal & kartu terupdate
     await fetchOrders()
-    if (selectedOrder.value && selectedOrder.value.id === orderToUpload.value.id) {
-      selectedOrder.value.payment_proof_id = attachment.id
-      selectedOrder.value.payment_proof = `http://127.0.0.1:8000/storage/${attachment.path || ''}`
-    }
   } catch (err) {
     ElMessage.error(getErrorMessage(err, 'Gagal mengunggah bukti pembayaran.'))
   } finally {
@@ -695,7 +676,9 @@ const submitPaymentProof = async () => {
   }
 }
 
-// Logika Settings
+// ==========================================
+// LOGIKA SETTINGS: 1. UPDATE KONTAK & ALAMAT
+// ==========================================
 const profileForm = reactive({
   phone: authUser.value?.customer?.phone || '',
   address: authUser.value?.customer?.address || ''
@@ -709,7 +692,7 @@ const handleUpdateProfile = async () => {
       method: 'PUT',
       body: profileForm
     })
-    ElMessage.success('Profil berhasil diperbarui.')
+    ElMessage.success('Kontak dan alamat berhasil diperbarui.')
     if (checkProfile) await checkProfile()
   } catch (err) {
     ElMessage.info('Data telah disimpan secara lokal.')
@@ -718,7 +701,46 @@ const handleUpdateProfile = async () => {
   }
 }
 
-// Salin Kode Voucher
+// ==========================================
+// LOGIKA SETTINGS: 2. GANTI PASSWORD
+// ==========================================
+const passwordForm = reactive({
+  current_password: '',
+  password: '',
+  password_confirmation: ''
+})
+const changingPassword = ref(false)
+
+const handleChangePassword = async () => {
+  // Validasi di sisi frontend
+  if (passwordForm.password.length < 8) {
+    ElMessage.warning('Password baru minimal 8 karakter.')
+    return
+  }
+  if (passwordForm.password !== passwordForm.password_confirmation) {
+    ElMessage.warning('Konfirmasi password baru tidak cocok.')
+    return
+  }
+
+  changingPassword.value = true
+  try {
+    await apiFetch('/user/password', {
+      method: 'PUT',
+      body: passwordForm
+    })
+    ElMessage.success('Password berhasil diperbarui!')
+    // Reset form setelah sukses
+    passwordForm.current_password = ''
+    passwordForm.password = ''
+    passwordForm.password_confirmation = ''
+  } catch (err) {
+    ElMessage.error(getErrorMessage(err, 'Gagal mengubah password. Pastikan password lama benar.'))
+  } finally {
+    changingPassword.value = false
+  }
+}
+
+// Helper Format
 const copyCode = (code) => {
   if (navigator.clipboard) {
     navigator.clipboard.writeText(code)
@@ -726,7 +748,6 @@ const copyCode = (code) => {
   }
 }
 
-// Helper Format
 const formatRupiah = (num) => {
   return new Intl.NumberFormat('id-ID', {
     style: 'currency',
