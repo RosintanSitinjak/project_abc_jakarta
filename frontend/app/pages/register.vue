@@ -26,6 +26,16 @@
             <el-input v-model="form.email" placeholder="nama@email.com" size="large" />
           </el-form-item>
 
+          <el-form-item label="Nomor WhatsApp" prop="phone">
+            <el-input 
+              v-model="form.phone" 
+              placeholder="Contoh: 081234567890" 
+              size="large" 
+              class="modern-input"
+              type="tel" 
+            />
+          </el-form-item>
+
           <!-- POIN 2: DROPDOWN TIPE AKUN -->
           <el-form-item label="Tipe Akun" prop="type">
             <el-select v-model="form.type" placeholder="Pilih tipe akun" class="w-full" size="large">

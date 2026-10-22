@@ -11,6 +11,13 @@ const handleLogout = async () => {
   }
 }
 
+const handleMenuCommand = async (command) => {
+  if (command === 'logout') {
+    await handleLogout()
+  } else {
+    await navigateTo(`/profile?tab=${command}`)
+  }
+}
 
 const navLinks = [
   { name: 'Beranda', path: '/' },
@@ -91,20 +98,84 @@ const socialLinks = [
         <!-- GANTI BLOK SIGN IN LAMA DENGAN INI -->
 <div class="flex items-center gap-4">
   <!-- JIKA SUDAH LOGIN -->
-  <template v-if="authUser">
-    <div class="flex items-center gap-4">
-      <div class="text-right hidden sm:block leading-none">
-        <p class="text-[10px] font-bold text-[#00a9c3] uppercase tracking-widest mb-1">Selamat Datang,</p>
-        <p class="text-sm font-black text-[#1e293b]">{{ authUser.name }}</p>
+  <!-- JIKA SUDAH LOGIN (DROPDOWN MENU USER) -->
+<template v-if="authUser">
+  <ClientOnly>
+    <el-dropdown trigger="click" @command="handleMenuCommand">
+      <!-- Tombol Pemicu Dropdown -->
+      <div class="flex items-center gap-3 cursor-pointer py-1.5 px-3 rounded-2xl hover:bg-gray-200/50 transition-all border border-gray-200/60 bg-white/60">
+        <!-- Avatar / Inisial Huruf Depan -->
+        <div class="w-8 h-8 rounded-full bg-[#00a9c3]/15 text-[#00a9c3] font-black text-xs flex items-center justify-center border border-[#00a9c3]/30 shrink-0">
+          {{ authUser.name ? authUser.name.charAt(0).toUpperCase() : 'U' }}
+        </div>
+
+        <!-- Teks Selamat Datang & Nama -->
+        <div class="text-left leading-none hidden sm:block">
+          <p class="text-[9px] font-bold text-[#00a9c3] uppercase tracking-widest mb-1">Selamat Datang,</p>
+          <p class="text-xs font-black text-[#1e293b] flex items-center gap-1">
+            <span class="max-w-[120px] truncate">{{ authUser.name }}</span>
+            <!-- Ikon Panah Kecil -->
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+            </svg>
+          </p>
+        </div>
       </div>
-      <button 
-        @click="handleLogout"
-        class="px-5 py-2 border-2 border-red-100 text-red-500 text-[12px] font-bold rounded-full hover:bg-red-50 transition-all active:scale-95"
-      >
-        Logout
-      </button>
-    </div>
-  </template>
+
+      <!-- DAFTAR MENU SESUAI PERMINTAAN -->
+      <template #dropdown>
+        <el-dropdown-menu class="!p-2 !rounded-2xl min-w-[180px]">
+          <el-dropdown-item command="profile" class="!rounded-xl !py-2.5">
+            <span class="flex items-center gap-2.5 text-xs font-bold text-gray-700">
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-[#00a9c3]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
+              Profile
+            </span>
+          </el-dropdown-item>
+
+          <el-dropdown-item command="buying" class="!rounded-xl !py-2.5">
+            <span class="flex items-center gap-2.5 text-xs font-bold text-gray-700">
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-[#00a9c3]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+              </svg>
+              Buying
+            </span>
+          </el-dropdown-item>
+
+          <el-dropdown-item command="voucher" class="!rounded-xl !py-2.5">
+            <span class="flex items-center gap-2.5 text-xs font-bold text-gray-700">
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-[#00a9c3]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+              </svg>
+              Voucher
+            </span>
+          </el-dropdown-item>
+
+          <el-dropdown-item command="settings" class="!rounded-xl !py-2.5">
+            <span class="flex items-center gap-2.5 text-xs font-bold text-gray-700">
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-[#00a9c3]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+              Settings
+            </span>
+          </el-dropdown-item>
+
+          <!-- Garis Pemisah untuk Logout -->
+          <el-dropdown-item divided command="logout" class="!rounded-xl !py-2.5 !mt-1">
+            <span class="flex items-center gap-2.5 text-xs font-bold text-rose-500">
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              </svg>
+              Logout
+            </span>
+          </el-dropdown-item>
+        </el-dropdown-menu>
+      </template>
+    </el-dropdown>
+  </ClientOnly>
+</template>
 
   <!-- JIKA BELUM LOGIN (Tampilan awal kamu) -->
   <NuxtLink 
