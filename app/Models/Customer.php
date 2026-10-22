@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany; // <--- WAJIB TAMBAHKAN INI
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Customer extends Model
@@ -21,13 +21,20 @@ class Customer extends Model
     protected $fillable = [
         'user_id',
         'name',
-        'type',
-        'status', // 'pending', 'approved', 'rejected'
+        'type',             // 'jemaat', 'gereja', 'sekolah', 'penginjil'
+        'status',           // 'pending', 'approved', 'rejected'
         'rejection_reason',
         'address',
         'phone',
-        'credit_limit',
-        'current_debt',
+        'credit_limit',     // Plafon kredit: 0 untuk jemaat, 5.000.000 untuk penginjil
+        'current_debt',     // Akumulasi sisa hutang berjalan
+    ];
+
+    protected $casts = [
+        'credit_limit' => 'integer',
+        'current_debt' => 'integer',
+        'created_at'   => 'datetime',
+        'updated_at'   => 'datetime',
     ];
 
     /**
@@ -39,11 +46,18 @@ class Customer extends Model
     }
 
     /**
-     * RELASI KE PESANAN (BARU DITAMBAHKAN)
-     * Gunanya agar kita bisa menghitung total hutang dari riwayat belanja
+     * RELASI KE RIWAYAT PESANAN
      */
     public function orders(): HasMany
     {
-        return $this->hasMany(Order::class);
+        return $this->hasMany(Order::class, 'customer_id');
+    }
+
+    /**
+     * RELASI KE RIWAYAT PEMBAYARAN CICILAN
+     */
+    public function debtPayments(): HasMany
+    {
+        return $this->hasMany(DebtPayment::class, 'customer_id');
     }
 }

@@ -65,7 +65,7 @@
             </div>
           </div>
 
-          <!-- 2. OPSI PENGIRIMAN (Arahan Pak Andi) -->
+          <!-- 2. OPSI PENGIRIMAN -->
           <div class="bg-white rounded-3xl p-6 md:p-8 border border-gray-100 shadow-sm">
             <h2 class="text-sm font-black text-gray-900 uppercase tracking-wider mb-4 pb-2 border-b border-gray-100">
               2. Opsi Pengiriman
@@ -117,7 +117,7 @@
                     Pengiriman paket diatur langsung oleh pihak kantor ABC Jakarta.
                   </p>
                 </div>
-                <span class="mt-3 text-[10px] font-bold text-gray-400 pl-6.5">Tarif Ditagihkan Menyusul</span>
+                <span class="mt-3 text-[10px] font-bold text-[#00a9c3] pl-6.5">Tarif Kurir Resmi</span>
               </div>
             </div>
 
@@ -139,8 +139,39 @@
               </p>
             </div>
 
-            <!-- Formulir Alamat jika Memilih Ekspedisi -->
+            <!-- Formulir Alamat & Skema Ongkir jika Memilih Ekspedisi -->
             <div v-else class="space-y-4 pt-4 border-t border-gray-100">
+              <div>
+                <label class="block text-gray-700 font-bold text-xs mb-2">Skema Pembayaran Ongkos Kirim <span class="text-rose-500">*</span></label>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <label 
+                    class="p-3.5 rounded-xl border-2 cursor-pointer transition flex items-start gap-2.5"
+                    :class="orderForm.shipping_payment_type === 'prepaid' ? 'border-[#00a9c3] bg-[#00a9c3]/5' : 'border-gray-200'"
+                  >
+                    <input type="radio" value="prepaid" v-model="orderForm.shipping_payment_type" class="mt-0.5 accent-[#00a9c3]" />
+                    <div>
+                      <span class="font-bold text-xs text-gray-900 block">Bayar Bersama Tagihan</span>
+                      <p class="text-[10px] text-gray-500 mt-0.5 leading-snug">
+                        Admin ABC Jakarta akan menghitung ongkir riil, lalu tagihan langsung siap Anda bayar via web/transfer.
+                      </p>
+                    </div>
+                  </label>
+
+                  <label 
+                    class="p-3.5 rounded-xl border-2 cursor-pointer transition flex items-start gap-2.5"
+                    :class="orderForm.shipping_payment_type === 'cod' ? 'border-[#00a9c3] bg-[#00a9c3]/5' : 'border-gray-200'"
+                  >
+                    <input type="radio" value="cod" v-model="orderForm.shipping_payment_type" class="mt-0.5 accent-[#00a9c3]" />
+                    <div>
+                      <span class="font-bold text-xs text-gray-900 block">Bayar di Tempat (COD Kurir)</span>
+                      <p class="text-[10px] text-gray-500 mt-0.5 leading-snug">
+                        Hanya bayar harga buku sekarang. Ongkos kirim dibayarkan tunai ke kurir saat paket sampai.
+                      </p>
+                    </div>
+                  </label>
+                </div>
+              </div>
+
               <div>
                 <label class="block text-gray-700 font-bold text-xs mb-1">
                   Alamat Lengkap Pengiriman <span class="text-rose-500">*</span>
@@ -161,7 +192,7 @@
                   <input 
                     v-model="orderForm.shipping_city" 
                     type="text" 
-                    placeholder="Contoh: Jakarta Selatan" 
+                    placeholder="Contoh: Jakarta Selatan / Bandung" 
                     class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-[#00a9c3] outline-none text-xs transition"
                   />
                 </div>
@@ -175,10 +206,6 @@
                   />
                 </div>
               </div>
-
-              <p class="text-[11px] text-amber-700 bg-amber-50 p-3 rounded-xl border border-amber-200 leading-relaxed">
-                ℹ️ <b>Catatan Ekspedisi:</b> Ongkos kirim ekspedisi akan dikonfirmasi dan ditagihkan langsung oleh pihak kantor ABC Jakarta setelah berat pesanan dihitung.
-              </p>
             </div>
           </div>
 
@@ -189,7 +216,7 @@
             </h2>
 
             <div class="space-y-3">
-              <!-- Opsi A: Transfer / Tunai (Semua user bisa pilih) -->
+              <!-- Transfer Bank Mandiri (Semua Akun) -->
               <label 
                 class="flex items-start gap-3 p-4 rounded-2xl border-2 cursor-pointer transition"
                 :class="orderForm.payment_method === 'transfer' ? 'border-[#00a9c3] bg-[#00a9c3]/5' : 'border-gray-200/80 hover:border-gray-300'"
@@ -201,39 +228,78 @@
                   class="mt-1 accent-[#00a9c3]" 
                 />
                 <div>
-                  <span class="font-bold text-gray-900 text-xs block">Transfer Bank / Tunai (Cash)</span>
+                  <span class="font-bold text-gray-900 text-xs block">Transfer Bank Mandiri (Lunas)</span>
                   <p class="text-gray-400 text-[11px] mt-0.5">
-                    Pembayaran lunas melalui transfer rekening resmi bank atau pembayaran tunai saat pick up.
+                    Rekening resmi Mandiri: 123-00-9876543-2 a.n. Adventist Book Center Jakarta.
                   </p>
                 </div>
               </label>
 
-              <!-- Opsi B: Kredit / Tempo (HANYA MUNCUL JIKA BUKAN JEMAAT UMUM) -->
+              <!-- QRIS (Semua Akun) -->
               <label 
-                v-if="canUseCredit"
                 class="flex items-start gap-3 p-4 rounded-2xl border-2 cursor-pointer transition"
-                :class="orderForm.payment_method === 'credit' ? 'border-[#00a9c3] bg-[#00a9c3]/5' : 'border-gray-200/80 hover:border-gray-300'"
+                :class="orderForm.payment_method === 'qris' ? 'border-[#00a9c3] bg-[#00a9c3]/5' : 'border-gray-200/80 hover:border-gray-300'"
               >
                 <input 
                   type="radio" 
-                  value="credit" 
+                  value="qris" 
+                  v-model="orderForm.payment_method" 
+                  class="mt-1 accent-[#00a9c3]" 
+                />
+                <div>
+                  <span class="font-bold text-gray-900 text-xs block">QRIS ABC Jakarta (Lunas)</span>
+                  <p class="text-gray-400 text-[11px] mt-0.5">
+                    Pembayaran instan melalui GoPay, OVO, Dana, BCA Mobile, atau e-Wallet lainnya.
+                  </p>
+                </div>
+              </label>
+
+              <!-- Tunai (Cash) Khusus Pick Up di Kantor -->
+              <label 
+                v-if="orderForm.shipping_method === 'pickup'"
+                class="flex items-start gap-3 p-4 rounded-2xl border-2 cursor-pointer transition"
+                :class="orderForm.payment_method === 'cash' ? 'border-[#00a9c3] bg-[#00a9c3]/5' : 'border-gray-200/80 hover:border-gray-300'"
+              >
+                <input 
+                  type="radio" 
+                  value="cash" 
+                  v-model="orderForm.payment_method" 
+                  class="mt-1 accent-[#00a9c3]" 
+                />
+                <div>
+                  <span class="font-bold text-gray-900 text-xs block">Bayar Tunai di Kasir Kantor</span>
+                  <p class="text-gray-400 text-[11px] mt-0.5">
+                    Pembayaran langsung di kasir ABC Jakarta saat mengambil buku fisik.
+                  </p>
+                </div>
+              </label>
+
+              <!-- Opsi Kredit / Tempo (Khusus Mitra PL, Gereja, Sekolah) -->
+              <label 
+                v-if="canUseCredit"
+                class="flex items-start gap-3 p-4 rounded-2xl border-2 cursor-pointer transition"
+                :class="orderForm.payment_method === 'kredit' ? 'border-[#00a9c3] bg-[#00a9c3]/5' : 'border-gray-200/80 hover:border-gray-300'"
+              >
+                <input 
+                  type="radio" 
+                  value="kredit" 
                   v-model="orderForm.payment_method" 
                   class="mt-1 accent-[#00a9c3]" 
                 />
                 <div>
                   <div class="flex items-center gap-2">
-                    <span class="font-bold text-gray-900 text-xs">Kredit / Tempo (Khusus Mitra Lembaga / PL)</span>
-                    <span class="text-[9px] bg-emerald-100 text-emerald-800 font-bold px-1.5 py-0.2 rounded">Tersedia</span>
+                    <span class="font-bold text-gray-900 text-xs">Kredit / Tempo (Fasilitas Khusus Kemitraan)</span>
+                    <span class="text-[9px] bg-emerald-100 text-emerald-800 font-bold px-1.5 py-0.5 rounded">Tersedia</span>
                   </div>
                   <p class="text-gray-400 text-[11px] mt-0.5">
-                    Fasilitas pembayaran berjangka khusus akun Penginjil Literatur, Gereja, atau Sekolah.
+                    Cicilan tempo siklus 30 hari (Maks. Plafon Rp 5.000.000 untuk PL).
                   </p>
                 </div>
               </label>
 
-              <!-- Pesan Info jika akun Jemaat -->
+              <!-- Pesan edukasi jika akun Jemaat -->
               <div v-else class="p-3 bg-gray-50 rounded-xl border border-gray-200/60 text-[11px] text-gray-500 italic">
-                *Akun Jemaat Umum hanya dapat menggunakan metode pembayaran Transfer/Tunai.
+                *Akun Jemaat Umum wajib menggunakan metode pembayaran tunai/lunas (Transfer, QRIS, atau Bayar di Kasir).
               </div>
             </div>
           </div>
@@ -244,7 +310,7 @@
             <input 
               v-model="orderForm.notes" 
               type="text" 
-              placeholder="Contoh: Titipkan ke satpam kantor / hubungi nomor alternatif..." 
+              placeholder="Contoh: Titipkan ke satpam kantor / hubungi nomor WhatsApp ini jika tidak aktif..." 
               class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-[#00a9c3] outline-none text-xs transition"
             />
           </div>
@@ -253,6 +319,12 @@
         <!-- KOLOM KANAN: RINGKASAN PESANAN (4 Kolom) -->
         <div class="lg:col-span-4 bg-white rounded-3xl p-6 border border-gray-100 shadow-sm sticky top-24">
           <h2 class="text-base font-black text-gray-900 mb-4 pb-3 border-b border-gray-100">Ringkasan Pembelian</h2>
+
+          <!-- Info Diskon Khusus PL -->
+          <div v-if="isApprovedPL" class="mb-4 p-3 bg-emerald-50 rounded-xl border border-emerald-200 text-emerald-800 text-[11px] flex items-center gap-1.5">
+            <span class="font-bold">🏷️ Tarif Khusus Penginjil:</span>
+            <span>Semua harga buku telah disesuaikan secara otomatis.</span>
+          </div>
 
           <!-- Daftar Buku di Keranjang -->
           <div class="space-y-3 mb-6 max-h-56 overflow-y-auto pr-1">
@@ -280,7 +352,9 @@
             <div class="flex justify-between text-gray-500">
               <span>Biaya Pengiriman</span>
               <span class="font-bold text-gray-900">
-                {{ orderForm.shipping_method === 'pickup' ? 'Bebas Ongkir (Rp 0)' : 'Ditagihkan Terpisah' }}
+                {{ orderForm.shipping_method === 'pickup' 
+                  ? 'Bebas Ongkir (Rp 0)' 
+                  : (orderForm.shipping_payment_type === 'cod' ? 'Bayar di Tempat (COD)' : 'Dihitung oleh Admin') }}
               </span>
             </div>
             <div class="flex justify-between text-sm font-black text-gray-900 pt-3 border-t border-gray-100">
@@ -310,14 +384,11 @@ import { useAuth } from '~/composables/useAuth'
 import { useCart } from '~/composables/useCart'
 import { useApi } from '~/composables/useApi'
 
-// PENJAGA HALAMAN: Tulis langsung fungsinya di sini (Bebas Error!)
 definePageMeta({
   layout: 'public',
   middleware: [
     function (to, from) {
       const { authUser } = useAuth()
-
-      // Jika belum login, langsung lempar ke login
       if (!authUser.value) {
         if (import.meta.client) {
           ElMessage.warning('Silakan login terlebih dahulu untuk mengakses checkout.')
@@ -332,10 +403,8 @@ const { authUser, isApprovedPL, canUseCredit } = useAuth()
 const { cart, totalItems, subtotal, clearCart, formatRupiah } = useCart()
 const { apiFetch, getErrorMessage } = useApi()
 
-
 const submitting = ref(false)
 
-// Label tipe customer
 const customerTypeLabel = computed(() => {
   const type = authUser.value?.customer?.type || 'jemaat'
   const map: Record<string, string> = {
@@ -352,15 +421,22 @@ const orderForm = reactive({
   customer_name: authUser.value?.name || '',
   customer_email: authUser.value?.email || '',
   customer_phone: authUser.value?.customer?.phone || '',
-  shipping_method: 'pickup', // Default: pickup (Ambil Sendiri di Tebet)
+  shipping_method: 'pickup', // 'pickup' atau 'delivery'
+  shipping_payment_type: 'prepaid', // 'prepaid' (tagihan) atau 'cod'
   shipping_address: authUser.value?.customer?.address || '',
   shipping_city: '',
   shipping_postal_code: '',
-  payment_method: 'transfer', // Default: transfer
+  payment_method: 'transfer', // 'transfer', 'qris', 'cash', 'kredit'
   notes: ''
 })
 
-// Cek keranjang saat halaman dimuat
+// Proteksi jika Jemaat mencoba memilih kredit
+watchEffect(() => {
+  if (!canUseCredit.value && orderForm.payment_method === 'kredit') {
+    orderForm.payment_method = 'transfer'
+  }
+})
+
 onMounted(() => {
   if (cart.value.length === 0) {
     ElMessage.info('Keranjang belanja Anda masih kosong.')
@@ -370,13 +446,11 @@ onMounted(() => {
 
 // Handler Buat Pesanan
 const handlePlaceOrder = async () => {
-  // 1. Validasi Telepon
   if (!orderForm.customer_phone.trim()) {
     ElMessage.warning('Mohon lengkapi nomor Telepon / WhatsApp untuk konfirmasi pesanan.')
     return
   }
 
-  // 2. Validasi Alamat jika pilih Ekspedisi
   if (orderForm.shipping_method === 'delivery') {
     if (!orderForm.shipping_address.trim() || !orderForm.shipping_city.trim()) {
       ElMessage.warning('Mohon isi alamat lengkap dan kota pengiriman ekspedisi.')
@@ -386,44 +460,55 @@ const handlePlaceOrder = async () => {
 
   submitting.value = true
   try {
+    const fullShippingAddress = orderForm.shipping_method === 'delivery' 
+      ? `${orderForm.shipping_address}, ${orderForm.shipping_city} ${orderForm.shipping_postal_code}`.trim()
+      : null
+
     const payload = {
       customer_id: authUser.value?.customer?.id,
       customer_name: orderForm.customer_name,
       customer_email: orderForm.customer_email,
       customer_phone: orderForm.customer_phone,
+      
+      delivery_method: orderForm.shipping_method,
       shipping_method: orderForm.shipping_method,
-      shipping_address: orderForm.shipping_method === 'delivery' 
-        ? `${orderForm.shipping_address}, ${orderForm.shipping_city} ${orderForm.shipping_postal_code}`
-        : 'Ambil Sendiri di Kantor ABC Jakarta (Tebet)',
-      payment_method: orderForm.payment_method,
+      shipping_payment_type: orderForm.shipping_method === 'pickup' ? 'none' : orderForm.shipping_payment_type,
+      shipping_address: fullShippingAddress,
+      
+      payment_method: orderForm.payment_method === 'credit' ? 'kredit' : orderForm.payment_method,
+      source: 'website',
       notes: orderForm.notes,
       total_amount: subtotal.value,
+      
       items: cart.value.map((item) => ({
         book_id: item.id,
-        title: item.title,
-        qty: item.qty,
-        unit_price: isApprovedPL.value ? item.member_price : item.price,
-        subtotal: (isApprovedPL.value ? item.member_price : item.price) * item.qty
+        qty: item.qty
       }))
     }
 
-    // Kirim pesanan ke backend API Laravel
     await apiFetch('/orders', {
       method: 'POST',
       body: payload
     })
 
+    // Notifikasi cerdas berdasarkan metode yang dipilih
+    let successMsg = 'Pesanan Anda telah dicatat oleh pihak kantor ABC Jakarta.'
+    if (orderForm.payment_method === 'kredit') {
+      successMsg = 'Pesanan Kredit/Tempo Anda berhasil diajukan dengan tempo 30 hari. Menunggu persetujuan admin untuk pengemasan buku.'
+    } else if (orderForm.shipping_method === 'delivery' && orderForm.shipping_payment_type === 'prepaid') {
+      successMsg = 'Pesanan Anda telah dicatat. Admin akan segera menghitung ongkos kirim dan menerbitkan tagihan final.'
+    } else {
+      successMsg = 'Pesanan Anda berhasil dibuat! Silakan lakukan pembayaran dan unggah bukti transfer di menu Pesanan Saya.'
+    }
+
     ElNotification({
       title: 'Pesanan Berhasil Dibuat!',
-      message: 'Pesanan Anda telah dicatat. Pihak kantor ABC Jakarta akan segera menghubungi Anda.',
+      message: successMsg,
       type: 'success',
-      duration: 5000
+      duration: 6000
     })
 
-    // Bersihkan keranjang belanja setelah sukses
     clearCart()
-
-    // Arahkan kembali ke katalog
     navigateTo('/katalog')
   } catch (err: any) {
     ElMessage.error(getErrorMessage(err, 'Gagal membuat pesanan. Silakan coba kembali.'))

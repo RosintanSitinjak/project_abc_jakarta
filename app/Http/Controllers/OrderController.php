@@ -17,24 +17,29 @@ class OrderController extends Controller
 {
     use ManagesAttachments; 
 
+    /**
+     * TAMPILKAN DAFTAR PESANAN DENGAN FILTER FLEKSIBEL
+     */
     public function index(Request $request): JsonResponse
     {
         $query = Order::with(['customer' => fn($q) => $q->withTrashed(), 'items.book', 'thumbnail']);
         
-        // Filter Tanggal
+        // Filter Rentang Tanggal
         if ($request->filled('start_date') && $request->filled('end_date')) {
             $query->whereBetween('created_at', [$request->start_date . ' 00:00:00', $request->end_date . ' 23:59:59']);
         }
 
-        // Filter Spesifik
+        // Filter Metode & Status Pembayaran
         if ($request->filled('payment_method')) $query->where('payment_method', $request->payment_method);
         if ($request->filled('payment_status')) $query->where('payment_status', $request->payment_status);
+        if ($request->filled('shipping_status')) $query->where('shipping_status', $request->shipping_status);
         
+        // Filter Tipe Pelanggan (Jemaat, PL, Gereja, Sekolah)
         if ($request->filled('type')) {
             $query->whereHas('customer', fn($q) => $q->where('type', $request->type));
         }
 
-        // Pencarian Nama atau No Invoice
+        // Pencarian Kata Kunci (Invoice / Nama Pelanggan)
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function($q) use ($search) {
@@ -53,69 +58,279 @@ class OrderController extends Controller
         return response()->json($orders);
     }
 
+    /**
+     * BUAT PESANAN (MENDUKUNG ASSISTED ORDER ADMIN & CHECKOUT USER)
+     */
     public function store(Request $request): JsonResponse
     {
         $request->validate([
             'customer_id'    => 'required|exists:customers,id',
-            'payment_method' => 'required',
-            'items'          => 'required|array',
-            'total_amount'   => 'required',
+            'payment_method' => 'required|string',
+            'items'          => 'required|array|min:1',
+            'items.*.book_id'=> 'required|exists:books,id',
+            'items.*.qty'    => 'required|integer|min:1',
         ]);
 
         return DB::transaction(function () use ($request) {
-            $customer = Customer::find($request->customer_id);
-            $paidAtStart = $request->input('paid_amount', 0);
-            $remaining = $request->total_amount - $paidAtStart;
+            $customer = Customer::findOrFail($request->customer_id);
 
+            // 1. SINKRONKAN NOMOR WHATSAPP KE PROFIL CUSTOMER
+            if ($request->filled('customer_phone') || $request->filled('phone')) {
+                $phoneInput = $request->input('customer_phone') ?? $request->input('phone');
+                if (!empty($phoneInput)) {
+                    $customer->update(['phone' => $phoneInput]);
+                }
+            }
+
+            // 2. Ambil Alamat Pengiriman
+            $shippingAddress = $request->input('shipping_address') 
+                ?? $request->input('address') 
+                ?? $request->input('alamat');
+
+            if ($request->filled('city') || $request->filled('kota')) {
+                $city = $request->input('city') ?? $request->input('kota');
+                $postal = $request->input('postal_code') ?? $request->input('kode_pos');
+                $shippingAddress = trim(($shippingAddress ?? '') . ', ' . $city . ' ' . ($postal ?? ''));
+            }
+
+            // 3. DETEKSI METODE PENGIRIMAN
+            $rawMethod = strtolower((string) (
+                $request->input('delivery_method') 
+                ?? $request->input('shipping_method') 
+                ?? $request->input('delivery_type') 
+                ?? $request->input('shipping_type') 
+                ?? ''
+            ));
+
+            $hasDeliveryKeyword = in_array($rawMethod, ['delivery', 'ekspedisi', 'kurir', 'shipping']);
+            $hasPickupKeyword = in_array($rawMethod, ['pickup', 'ambil_sendiri', 'self_pickup']);
+
+            if ($hasDeliveryKeyword || (!$hasPickupKeyword && !empty($shippingAddress) && strlen(trim($shippingAddress)) > 2)) {
+                $deliveryMethod = 'delivery';
+            } else {
+                $deliveryMethod = 'pickup';
+            }
+
+            // 4. DETEKSI SKEMA ONGKOS KIRIM
+            $rawPaymentType = strtolower((string) (
+                $request->input('shipping_payment_type') 
+                ?? $request->input('ongkir_type') 
+                ?? ''
+            ));
+
+            if ($deliveryMethod === 'pickup') {
+                $shippingPaymentType = 'none';
+                $shippingFee = 0;
+            } elseif (in_array($rawPaymentType, ['cod', 'bayar_ditempat'])) {
+                $shippingPaymentType = 'cod';
+                $shippingFee = 0;
+            } else {
+                $shippingPaymentType = 'prepaid';
+                $shippingFee = (float) $request->input('shipping_fee', 0);
+            }
+
+            // 5. Hitung Subtotal Buku Berdasarkan Peran Pelanggan (PL Mendapat Harga Khusus PL)
+            $bookSubtotal = 0;
+            $itemsData = [];
+
+            foreach ($request->items as $item) {
+                $book = Book::lockForUpdate()->findOrFail($item['book_id']);
+
+                if ($book->stock < $item['qty']) {
+                    abort(422, "Stok buku '{$book->title}' tidak mencukupi (Sisa stok: {$book->stock}).");
+                }
+
+                $finalPrice = ($customer->type === 'penginjil') 
+                    ? ($book->member_price ?? $book->price) 
+                    : $book->price;
+
+                $lineSubtotal = $finalPrice * $item['qty'];
+                $bookSubtotal += $lineSubtotal;
+
+                $itemsData[] = [
+                    'book'        => $book,
+                    'qty'         => $item['qty'],
+                    'final_price' => $finalPrice,
+                ];
+            }
+
+            // 6. Tentukan Status Awal Transaksi & Validasi Aturan Bisnis
+            $isWaitingShippingFee = ($deliveryMethod === 'delivery' && $shippingPaymentType === 'prepaid' && $shippingFee <= 0);
+            $totalAmount = $bookSubtotal + $shippingFee;
+            $paymentMethod = strtolower($request->payment_method) === 'credit' ? 'kredit' : strtolower($request->payment_method);
+
+            // ATURAN 1: Jemaat dilarang memilih opsi kredit
+            if ($customer->type === 'jemaat' && $paymentMethod === 'kredit') {
+                abort(422, "Pelanggan kategori Jemaat Umum wajib melunasi transaksi secara langsung (Cash, Transfer, atau QRIS).");
+            }
+
+            $paidAtStart = (float) $request->input('paid_amount', 0);
+
+            // Untuk pesanan assisted order admin jika tunai/lunas
+            if ($customer->type === 'jemaat' && !$isWaitingShippingFee && $paymentMethod !== 'kredit') {
+                if ($paidAtStart < $totalAmount && $request->input('source') === 'admin_manual') {
+                    $paidAtStart = $totalAmount;
+                }
+            }
+
+            $remaining = max(0, $totalAmount - $paidAtStart);
+
+            if ($isWaitingShippingFee) {
+                $paymentStatus = 'waiting_shipping_fee';
+            } else {
+                $paymentStatus = ($remaining <= 0) ? 'paid' : 'unpaid';
+            }
+
+            // ATURAN 2: Validasi Limit Kredit PL (Maksimal Rp 5.000.000)
+            // HANYA dicek jika metode pembayaran yang dipilih adalah 'KREDIT'
+            if ($customer->type === 'penginjil' && $paymentMethod === 'kredit') {
+                $projectedDebt = (float)$customer->current_debt + $remaining;
+                if ($projectedDebt > 5000000) {
+                    abort(422, "Akumulasi piutang melebihi limit Penginjil Literatur (Maks Rp 5.000.000). Total hutang berjalan Anda: Rp " . number_format($customer->current_debt, 0, ',', '.') . ". Harap lunasi piutang sebelumnya atau pilih metode pembayaran lunas (Transfer/QRIS/Tunai).");
+                }
+            }
+
+            // 7. Buat Record Pesanan
             $order = Order::create([
-                'customer_id'      => $request->customer_id,
-                'order_number'     => 'INV-' . date('Ymd') . '-' . strtoupper(Str::random(4)),
-                'total_amount'     => $request->total_amount,
-                'remaining_amount' => $remaining,
-                'payment_method'   => $request->payment_method,
-                'payment_status'   => ($remaining <= 0) ? 'paid' : 'unpaid',
-                'payment_proof_id' => $request->payment_proof_id,
-                'source'           => 'admin_manual',
-                'created_at'       => $request->date ?? now(),
-                'due_date'         => Carbon::parse($request->date ?? now())->addDays(30),
+                'customer_id'           => $customer->id,
+                'order_number'          => 'INV-' . date('Ymd') . '-' . strtoupper(Str::random(4)),
+                'total_amount'          => $totalAmount,
+                'remaining_amount'      => $remaining,
+                'shipping_fee'          => $shippingFee,
+                'delivery_method'       => $deliveryMethod,
+                'shipping_payment_type' => $shippingPaymentType,
+                'shipping_address'      => $shippingAddress ?: ($deliveryMethod === 'pickup' ? null : $customer->address),
+                'notes'                 => $request->input('notes'),
+                'payment_method'        => $paymentMethod,
+                'payment_status'        => $paymentStatus,
+                'shipping_status'       => 'pending',
+                'payment_proof_id'      => $request->payment_proof_id,
+                'source'                => $request->input('source', 'website'),
+                'created_at'            => $request->date ?? now(),
+                'due_date'              => Carbon::parse($request->date ?? now())->addDays(30),
             ]);
 
+            // Simpan foto bukti pembayaran jika ada
             if ($request->filled('payment_proof_id')) {
                 $this->setSingleAttachment($order, 'thumbnail', $request->payment_proof_id, 'payment_proof');
             }
 
-            if ($remaining > 0) $customer->increment('current_debt', $remaining);
+            // 8. Simpan Items & Kurangi Stok Buku (ROP)
+            foreach ($itemsData as $data) {
+                $order->items()->create([
+                    'book_id'           => $data['book']->id,
+                    'qty'               => $data['qty'],
+                    'price_at_purchase' => $data['final_price']
+                ]);
+                $data['book']->decrement('stock', $data['qty']);
+            }
 
+            // 9. Akumulasi Saldo Piutang Customer HANYA untuk metode KREDIT
+            if ($paymentMethod === 'kredit' && $remaining > 0 && !$isWaitingShippingFee) {
+                $customer->increment('current_debt', $remaining);
+            }
+
+            // Catat pembayaran uang muka (DP) jika ada
             if ($paidAtStart > 0) {
                 DB::table('debt_payments')->insert([
-                    'id'             => Str::uuid(), 
-                    'customer_id'    => $customer->id, 
+                    'id'             => Str::uuid(),
+                    'customer_id'    => $customer->id,
                     'amount'         => $paidAtStart,
-                    'payment_method' => $request->payment_method, 
+                    'payment_method' => $paymentMethod,
                     'attachment_id'  => $request->payment_proof_id ?? null,
-                    'created_at'     => $order->created_at, 
+                    'created_at'     => $order->created_at,
                     'updated_at'     => now(),
                 ]);
             }
 
-            foreach ($request->items as $item) {
-                $book = Book::find($item['book_id']);
-                $finalPrice = ($customer->type === 'penginjil') ? ($book->member_price ?? $book->price) : $book->price;
-                $order->items()->create([
-                    'book_id'           => $book->id, 
-                    'qty'               => $item['qty'], 
-                    'price_at_purchase' => $finalPrice
-                ]);
-                $book->decrement('stock', $item['qty']);
-            }
-            return response()->json($order->load(['customer', 'items.book']), 201);
+            return response()->json($order->load(['customer', 'items.book', 'thumbnail']), 201);
         });
     }
 
+    /**
+     * UPDATE STATUS PESANAN, ONGKIR, LOGISTIK, & CATATAN
+     */
+    public function update(Request $request, $id): JsonResponse
+    {
+        $order = Order::with('items.book')->findOrFail($id);
+        $oldPaymentStatus = $order->payment_status;
+        $customer = Customer::withTrashed()->find($order->customer_id);
+
+        return DB::transaction(function () use ($order, $request, $oldPaymentStatus, $customer) {
+            $bookSubtotal = $order->items->sum(function ($item) {
+                return (float)$item->price_at_purchase * (int)$item->qty;
+            });
+
+            // 1. Penyesuaian Biaya Ongkir oleh Admin
+            if ($request->has('shipping_fee')) {
+                $newShippingFee = (float) $request->shipping_fee;
+                $order->shipping_fee = $newShippingFee;
+
+                $newTotal = $bookSubtotal + $newShippingFee;
+                $order->total_amount = $newTotal;
+
+                if ($order->payment_status === 'waiting_shipping_fee') {
+                    $order->payment_status = 'unpaid';
+                    $order->remaining_amount = $newTotal;
+                    
+                    // Tambahkan ke utang hanya jika transaksinya adalah KREDIT
+                    if ($customer && $order->payment_method === 'kredit') {
+                        $customer->increment('current_debt', $newTotal);
+                    }
+                } else {
+                    $alreadyPaid = max(0, (float)$order->total_amount - (float)$order->remaining_amount);
+                    $newRemaining = max(0, $newTotal - $alreadyPaid);
+                    $diff = $newRemaining - (float)$order->remaining_amount;
+
+                    $order->remaining_amount = $newRemaining;
+                    if ($diff != 0 && $customer && $order->payment_status !== 'paid' && $order->payment_method === 'kredit') {
+                        if ($diff > 0) {
+                            $customer->increment('current_debt', $diff);
+                        } else {
+                            $customer->decrement('current_debt', abs($diff));
+                        }
+                    }
+                }
+            }
+
+            // 2. Pembaruan Status Pembayaran Manual
+            if ($request->filled('payment_status')) {
+                $newStatus = $request->payment_status;
+                if ($oldPaymentStatus !== 'paid' && $newStatus === 'paid') {
+                    // Potong current_debt hanya jika transaksi ini adalah transaksi kredit
+                    if ($customer && $order->remaining_amount > 0 && $order->payment_method === 'kredit') {
+                        $customer->decrement('current_debt', $order->remaining_amount);
+                    }
+                    $order->remaining_amount = 0;
+                }
+                $order->payment_status = $newStatus;
+            }
+
+            // 3. Pembaruan Logistik, Resi, Alamat, dan Catatan
+            if ($request->filled('shipping_status')) $order->shipping_status = $request->shipping_status;
+            if ($request->filled('tracking_number')) $order->tracking_number = $request->tracking_number;
+            if ($request->filled('courier_name')) $order->courier_name = $request->courier_name;
+            if ($request->filled('shipping_address')) $order->shipping_address = $request->shipping_address;
+            if ($request->has('notes')) $order->notes = $request->notes;
+
+            if ($request->filled('payment_proof_id')) {
+                $order->payment_proof_id = $request->payment_proof_id;
+                $this->setSingleAttachment($order, 'thumbnail', $request->payment_proof_id, 'payment_proof');
+            }
+
+            $order->save();
+
+            return response()->json($order->load(['customer', 'items.book', 'thumbnail']));
+        });
+    }
+
+    /**
+     * PEMBAYARAN CICILAN / PELUNASAN PIUTANG
+     */
     public function pay(Request $request, $id): JsonResponse
     {
         $request->validate([
-            'amount'        => 'required|integer|min:1', 
+            'amount'        => 'required|numeric|min:1', 
             'method'        => 'required|string', 
             'attachment_id' => 'nullable'
         ]);
@@ -123,8 +338,12 @@ class OrderController extends Controller
         $order = Order::with('customer')->findOrFail($id);
 
         return DB::transaction(function () use ($order, $request) {
-            $order->decrement('remaining_amount', $request->amount);
-            $order->customer->decrement('current_debt', $request->amount);
+            $payAmount = min((float)$request->amount, (float)$order->remaining_amount);
+
+            $order->decrement('remaining_amount', $payAmount);
+            if ($order->customer && $order->payment_method === 'kredit') {
+                $order->customer->decrement('current_debt', $payAmount);
+            }
 
             if ($order->remaining_amount <= 0) {
                 $order->update(['payment_status' => 'paid']);
@@ -133,41 +352,22 @@ class OrderController extends Controller
             DB::table('debt_payments')->insert([
                 'id'             => Str::uuid(),
                 'customer_id'    => $order->customer_id,
-                'amount'         => $request->amount,
+                'amount'         => $payAmount,
                 'payment_method' => $request->method,
                 'attachment_id'  => $request->attachment_id,
                 'created_at'     => now(),
                 'updated_at'     => now(),
             ]);
 
-            return response()->json(['message' => 'Pembayaran berhasil disimpan', 'order' => $order->fresh()]);
+            return response()->json([
+                'message' => 'Pembayaran berhasil diverifikasi dan dicatat.',
+                'order'   => $order->fresh(['customer', 'items.book'])
+            ]);
         });
     }
 
-    public function update(Request $request, $id): JsonResponse
-    {
-        $order = Order::findOrFail($id);
-        $oldStatus = $order->payment_status;
-        $order->update($request->only(['payment_status', 'shipping_status', 'tracking_number', 'courier_name']));
-        
-        if ($request->filled('payment_proof_id')) {
-            $order->payment_proof_id = $request->payment_proof_id; 
-            $order->save();
-            $this->setSingleAttachment($order, 'thumbnail', $request->payment_proof_id, 'payment_proof');
-        }
-
-        if ($oldStatus === 'unpaid' && $order->payment_status === 'paid') {
-            $customer = Customer::withTrashed()->find($order->customer_id);
-            if ($customer) {
-                $customer->decrement('current_debt', $order->remaining_amount);
-            }
-            $order->update(['remaining_amount' => 0]);
-        }
-        return response()->json($order->load(['customer', 'items.book', 'thumbnail']));
-    }
-
     /**
-     * BATALKAN PESANAN: Kembalikan Stok & Kurangi Hutang Pelanggan
+     * BATALKAN PESANAN: Kembalikan Stok Buku & Potong Hutang (Jika Kredit)
      */
     public function cancel($id): JsonResponse 
     {
@@ -178,7 +378,6 @@ class OrderController extends Controller
         }
 
         return DB::transaction(function () use ($order) {
-            // 1. Kembalikan stok buku
             foreach ($order->items as $item) {
                 $book = Book::find($item->book_id);
                 if ($book) {
@@ -186,8 +385,8 @@ class OrderController extends Controller
                 }
             }
 
-            // 2. Jika ada sisa tagihan, kurangi hutang customer
-            if ($order->remaining_amount > 0) {
+            // Kurangi hutang hanya jika order ini berstatus kredit dan belum bayar
+            if ($order->remaining_amount > 0 && $order->payment_method === 'kredit' && $order->payment_status !== 'waiting_shipping_fee') {
                 $customer = Customer::withTrashed()->find($order->customer_id);
                 if ($customer) {
                     $customer->decrement('current_debt', $order->remaining_amount);
@@ -196,6 +395,7 @@ class OrderController extends Controller
 
             $order->update([
                 'payment_status'   => 'cancelled',
+                'shipping_status'  => 'cancelled',
                 'remaining_amount' => 0
             ]);
 
@@ -211,7 +411,6 @@ class OrderController extends Controller
         $order = Order::with(['customer' => fn($q) => $q->withTrashed(), 'items.book'])->findOrFail($id);
         $tanggalCetak = Carbon::now()->translatedFormat('d F Y H:i');
 
-        // Menggunakan invoice_pdf.blade.php sesuai struktur folder views/reports
         $viewName = view()->exists('reports.invoice_pdf') ? 'reports.invoice_pdf' : 'reports.invoice';
 
         $pdf = Pdf::loadView($viewName, [
@@ -224,13 +423,12 @@ class OrderController extends Controller
     }
 
     /**
-     * CETAK PDF LAPORAN PESANAN TERFILTER (BULANAN)
+     * CETAK PDF REKAP PENJUALAN BULANAN
      */
-public function exportMonthlyReport(Request $request) 
+    public function exportMonthlyReport(Request $request) 
     {
         $query = Order::with(['customer' => fn($q) => $q->withTrashed(), 'items.book']);
 
-        // Terapkan filter tanggal jika diisi
         if ($request->filled('start_date') && $request->filled('end_date')) {
             $query->whereBetween('created_at', [$request->start_date . ' 00:00:00', $request->end_date . ' 23:59:59']);
         }
@@ -242,7 +440,6 @@ public function exportMonthlyReport(Request $request)
 
         $orders = $query->latest()->get();
 
-        // 1. Buat teks Periode dinamis sesuai filter tanggal yang dipilih
         if ($request->filled('start_date') && $request->filled('end_date')) {
             $periode = Carbon::parse($request->start_date)->translatedFormat('d M Y') . ' s/d ' . Carbon::parse($request->end_date)->translatedFormat('d M Y');
         } elseif ($request->filled('start_date')) {
@@ -251,7 +448,6 @@ public function exportMonthlyReport(Request $request)
             $periode = 'Bulan ' . Carbon::now()->translatedFormat('F Y');
         }
 
-        // 2. Kirim $orders dan $periode ke template Blade kamu
         $pdf = Pdf::loadView('reports.monthly_sales_pdf', [
             'orders'  => $orders,
             'periode' => $periode,
@@ -260,4 +456,4 @@ public function exportMonthlyReport(Request $request)
         $pdf->setPaper('a4', 'portrait');
         return $pdf->download('Laporan-Penjualan-ABC-Jakarta-' . date('Y-m-d') . '.pdf');
     }
-    }
+}
