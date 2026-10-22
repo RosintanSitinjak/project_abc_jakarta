@@ -77,6 +77,7 @@ class AuthController extends Controller
         $request->validate([
             'name'     => 'required|string|max:255',
             'email'    => 'required|string|email|max:255|unique:users',
+            'phone'    => 'required|string|max:20',
             'password' => 'required|string|min:8|confirmed',
             'type'     => 'required|in:jemaat,gereja,sekolah,penginjil',
         ]);
@@ -105,6 +106,7 @@ class AuthController extends Controller
             Customer::create([
                 'user_id'      => $user->id,
                 'name'         => $request->name,
+                'phone'        => $request->phone,
                 'type'         => $request->type,
                 'status'       => $status,
                 'credit_limit' => $limit,
