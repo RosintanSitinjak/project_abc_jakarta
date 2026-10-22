@@ -78,7 +78,7 @@ class CustomerController extends Controller
     }
 
     /**
-     * Mengambil riwayat cicilan lengkap dengan URL Foto Bukti
+     * MENGAMBIL RIWAYAT CICILAN & NORMALISASI METODE BAYAR + STRUK
      */
     public function paymentHistory($id): JsonResponse
     {
@@ -90,7 +90,13 @@ class CustomerController extends Controller
             ->get();
 
         $history->transform(function ($item) {
+            // Cek apakah file fisik ada atau format path valid
             $item->proof_url = $item->image_path ? asset('storage/' . $item->image_path) : null;
+            
+            // Rapikan metode pembayaran agar tidak tertulis 'KREDIT' di kartu cicilan
+            if (strtolower((string)$item->payment_method) === 'kredit') {
+                $item->payment_method = 'Uang Muka (DP)';
+            }
             return $item;
         });
 
@@ -100,26 +106,32 @@ class CustomerController extends Controller
     public function payDebt(Request $request, $id): JsonResponse
     {
         $request->validate([
-            'amount'         => 'required|integer', 
-            'payment_method' => 'required', 
+            'amount'         => 'required|numeric|min:1', 
+            'payment_method' => 'required|string', 
             'attachment_id'  => 'nullable'
         ]);
         
         $customer = Customer::findOrFail($id);
         
         return DB::transaction(function () use ($customer, $request) {
+            // Pastikan nominal bayar tidak melebihi sisa hutang
+            $deductAmount = min((float)$request->amount, (float)$customer->current_debt);
+
             DB::table('debt_payments')->insert([
                 'id'             => Str::uuid(), 
                 'customer_id'    => $customer->id, 
-                'amount'         => $request->amount,
+                'amount'         => (float)$request->amount,
                 'payment_method' => $request->payment_method, 
                 'attachment_id'  => $request->attachment_id,
                 'created_at'     => now(), 
                 'updated_at'     => now(),
             ]);
             
-            $customer->decrement('current_debt', $request->amount);
-            return response()->json(['message' => 'Pembayaran cicilan berhasil dicatat']);
+            $customer->decrement('current_debt', $deductAmount);
+            return response()->json([
+                'message'      => 'Pembayaran cicilan berhasil dicatat',
+                'current_debt' => $customer->fresh()->current_debt
+            ]);
         });
     }
 
@@ -170,14 +182,12 @@ class CustomerController extends Controller
      */
     public function destroy(Customer $customer): JsonResponse
     {
-        // 1. CEK: Apakah pelanggan masih punya sisa piutang aktif?
         if ($customer->current_debt > 0) {
             return response()->json([
                 'message' => "Gagal menghapus! Pelanggan '{$customer->name}' masih memiliki sisa piutang sebesar Rp " . number_format($customer->current_debt, 0, ',', '.') . ". Harap selesaikan pelunasan piutang terlebih dahulu."
             ], 422);
         }
 
-        // 2. CEK: Apakah masih ada pesanan yang belum berstatus paid/lunas?
         if ($customer->orders()->where('payment_status', '!=', 'paid')->exists()) {
             return response()->json([
                 'message' => "Gagal menghapus! Pelanggan '{$customer->name}' masih memiliki transaksi pesanan yang belum lunas."

@@ -55,7 +55,7 @@
           </template>
         </el-table-column>
 
-        <!-- WHATSAPP DENGAN KLIK LANGSUNG (@click) -->
+        <!-- WHATSAPP DENGAN KLIK LANGSUNG -->
         <el-table-column label="WhatsApp" width="165">
           <template #default="{ row }">
             <button 
@@ -178,7 +178,7 @@
         <el-table-column prop="payment_status" label="Status" width="110" align="center">
           <template #default="{ row }">
             <el-tag :type="row.payment_status === 'paid' ? 'success' : 'danger'" size="small" class="font-bold">
-              {{ row.payment_status === 'paid' ? 'LUNAS' : 'UNPAID' }}
+              {{ row.payment_status === 'paid' ? 'LUNAS' : 'BELUM LUNAS' }}
             </el-tag>
           </template>
         </el-table-column>
@@ -242,44 +242,95 @@
       </template>
     </el-dialog>
 
-    <!-- DIALOG: KARTU PIUTANG & BUKTI CICILAN -->
+    <!-- DIALOG: KARTU PIUTANG & BUKTI CICILAN (SUDAH DIUPGRADE BEBAS GAMBAR FAILED) -->
     <el-dialog 
       v-model="isHistoryOpen" 
       :title="'Kartu Piutang / Riwayat Cicilan: ' + selectedCustomer?.name" 
-      width="620px"
+      width="700px"
       append-to-body
       align-center
     >
-      <el-table :data="paymentHistoryData" border stripe size="small" class="w-full text-xs">
-        <el-table-column label="Tanggal" width="120">
-          <template #default="{ row }">
-            {{ new Date(row.created_at).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) }}
-          </template>
-        </el-table-column>
-        <el-table-column label="Nominal Bayar" width="140" align="right">
-          <template #default="{ row }">
-            <span class="font-bold text-emerald-600">Rp {{ formatNumber(row.amount) }}</span>
-          </template>
-        </el-table-column>
-        <el-table-column prop="payment_method" label="Metode" align="center" width="130">
-          <template #default="{ row }">
-            <span class="uppercase font-semibold">{{ row.payment_method }}</span>
-          </template>
-        </el-table-column>
-        <el-table-column label="Bukti Struk" align="center">
-          <template #default="{ row }">
-            <el-image 
-              v-if="row.proof_url" 
-              :src="row.proof_url" 
-              :preview-src-list="[row.proof_url]" 
-              preview-teleported
-              class="w-8 h-8 rounded shadow-xs cursor-pointer border border-slate-200" 
-              fit="cover" 
-            />
-            <span v-else class="text-slate-300 italic">Tanpa Bukti</span>
-          </template>
-        </el-table-column>
-      </el-table>
+      <div class="space-y-4">
+        <!-- 1. KARTU INFORMASI PLAFON & SISA PIUTANG -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3.5 bg-slate-50 border border-slate-200 rounded-2xl">
+          <div class="bg-white p-3 rounded-xl border border-slate-100 shadow-xs">
+            <span class="text-[10px] uppercase font-bold text-slate-400 block leading-tight">Total Hutang Berjalan</span>
+            <span class="text-base font-black text-red-600 mt-0.5 block">
+              Rp {{ formatNumber(selectedCustomer?.current_debt) }}
+            </span>
+          </div>
+
+          <div class="bg-white p-3 rounded-xl border border-slate-100 shadow-xs">
+            <span class="text-[10px] uppercase font-bold text-slate-400 block leading-tight">Plafon Kredit Maks</span>
+            <span class="text-base font-black text-slate-700 mt-0.5 block">
+              {{ selectedCustomer?.type === 'jemaat' ? 'Cash Only' : 'Rp ' + formatNumber(selectedCustomer?.credit_limit) }}
+            </span>
+          </div>
+
+          <div class="bg-white p-3 rounded-xl border border-slate-100 shadow-xs">
+            <span class="text-[10px] uppercase font-bold text-slate-400 block leading-tight">Sisa Plafon Tersedia</span>
+            <span class="text-base font-black text-emerald-600 mt-0.5 block">
+              {{ selectedCustomer?.type === 'jemaat' ? 'Rp 0' : 'Rp ' + formatNumber(Math.max(0, (selectedCustomer?.credit_limit || 0) - (selectedCustomer?.current_debt || 0))) }}
+            </span>
+          </div>
+        </div>
+
+        <!-- 2. TABEL RIWAYAT CICILAN & BUKTI -->
+        <el-table :data="paymentHistoryData" border stripe size="small" class="w-full text-xs rounded-xl overflow-hidden">
+          <el-table-column label="Tanggal" width="120">
+            <template #default="{ row }">
+              <span class="font-medium text-slate-700">
+                {{ new Date(row.created_at).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) }}
+              </span>
+            </template>
+          </el-table-column>
+          
+          <el-table-column label="Nominal Bayar" width="140" align="right">
+            <template #default="{ row }">
+              <span class="font-bold text-emerald-600">Rp {{ formatNumber(row.amount) }}</span>
+            </template>
+          </el-table-column>
+          
+          <el-table-column label="Metode" align="center" width="150">
+            <template #default="{ row }">
+              <el-tag size="small" effect="plain" class="font-bold text-[10px]" :type="getPaymentMethodTag(row.payment_method)">
+                {{ formatPaymentMethodLabel(row.payment_method) }}
+              </el-tag>
+            </template>
+          </el-table-column>
+
+          <!-- KOLOM BUKTI STRUK DENGAN SLOT ERROR CERDAS -->
+          <el-table-column label="Bukti Struk" align="center" min-width="120">
+            <template #default="{ row }">
+              <div v-if="row.proof_url" class="inline-flex items-center justify-center">
+                <el-image 
+                  :src="row.proof_url" 
+                  :preview-src-list="[row.proof_url]" 
+                  preview-teleported
+                  class="w-8 h-8 rounded-lg shadow-xs cursor-pointer border border-slate-200 hover:scale-105 transition-transform" 
+                  fit="cover" 
+                >
+                  <!-- JIKA FILE GAMBAR RUSAK / TIDAK ADA DI DISK -->
+                  <template #error>
+                    <div class="w-8 h-8 bg-slate-100 rounded-lg flex items-center justify-center text-slate-400" title="Struk tidak dapat dimuat">
+                      <Icon icon="solar:gallery-remove-bold" class="text-base text-slate-400" />
+                    </div>
+                  </template>
+                </el-image>
+              </div>
+              <span v-else class="text-slate-400 text-[10px] italic bg-slate-100 px-2 py-0.5 rounded-full">
+                Tanpa Struk (Kasir)
+              </span>
+            </template>
+          </el-table-column>
+        </el-table>
+
+        <!-- KETERANGAN JIKA BELUM PERNAH NYICIL -->
+        <div v-if="paymentHistoryData.length === 0" class="text-center py-6 text-slate-400 text-xs">
+          Belum ada catatan pembayaran cicilan untuk pelanggan ini.
+        </div>
+      </div>
+
       <template #footer>
         <el-button @click="isHistoryOpen = false">Tutup</el-button>
       </template>
@@ -312,18 +363,37 @@ const paymentHistoryData = ref([]);
 
 const isOrderHistoryOpen = ref(false); 
 const customerOrders = ref([]); 
-const selectedCustomer = ref(null);
+const selectedCustomer = ref<any>(null);
 
 const formatNumber = (val: number) => new Intl.NumberFormat('id-ID').format(val || 0);
 const formatDateTime = (d: string) => new Date(d).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
 
-// FUNGSI PENGIRIMAN PESAN WHATSAPP RESMI ABC JAKARTA
+// FORMAT LABEL METODE PEMBAYARAN PADA KARTU PIUTANG
+const formatPaymentMethodLabel = (method: string) => {
+  if (!method) return 'Tunai';
+  const m = method.toLowerCase();
+  if (m === 'kredit') return 'Uang Muka (DP)';
+  if (m === 'transfer') return 'Transfer Bank';
+  if (m === 'cash') return 'Tunai (Kasir)';
+  if (m === 'qris') return 'QRIS';
+  return method.toUpperCase();
+};
+
+const getPaymentMethodTag = (method: string) => {
+  if (!method) return 'info';
+  const m = method.toLowerCase();
+  if (m === 'kredit') return 'warning';
+  if (m === 'transfer') return 'primary';
+  if (m === 'cash') return 'success';
+  return 'info';
+};
+
+// WHATSAPP GATEWAY
 const sendWhatsApp = (customer: any) => {
   if (!customer.phone) {
     return ElMessage.warning('Nomor WhatsApp pelanggan tidak tersedia.');
   }
 
-  // Bersihkan format nomor: buang spasi, tanda minus, dan ubah awalan 0 menjadi 62
   let cleanPhone = customer.phone.replace(/[^0-9]/g, '');
   if (cleanPhone.startsWith('0')) {
     cleanPhone = '62' + cleanPhone.slice(1);
@@ -333,7 +403,6 @@ const sendWhatsApp = (customer: any) => {
   let text = '';
 
   if (debt > 0) {
-    // Pesan pengingat tagihan piutang resmi
     text = `Salam sejahtera Bpk/Ibu *${customer.name}*,\n` +
            `Kami dari *Adventist Book Center (ABC) Jakarta* menyampaikan informasi terkait transaksi literatur Anda.\n\n` +
            `📌 *Catatan Sisa Tagihan / Piutang Berjalan:*\n` +
@@ -344,14 +413,12 @@ const sendWhatsApp = (customer: any) => {
            `Mohon mengirimkan foto struk bukti transfer balasan di chat ini agar kami segera catatkan ke Kartu Piutang sistem. Apabila ada pertanyaan terkait rincian faktur nota, silakan membalas pesan ini.\n\n` +
            `Terima kasih atas pelayanannya. Tuhan memberkati! 🙏`;
   } else {
-    // Pesan sapaan ramah dan penawaran buku baru
     text = `Salam sejahtera Bpk/Ibu *${customer.name}*,\n` +
            `Kami dari *Adventist Book Center (ABC) Jakarta*.\n\n` +
            `Ada yang dapat kami bantu terkait kebutuhan buku pelajaran Sekolah Sabat, Roh Nubuat, atau literatur rohani lainnya untuk jemaat/pelayanan Anda?\n\n` +
            `Terima kasih dan Tuhan memberkati! 🙏`;
   }
 
-  // Gunakan endpoint resmi api.whatsapp.com/send agar teks tidak hilang saat dibuka di WhatsApp Web
   const waUrl = `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(text)}`;
   window.open(waUrl, '_blank');
 };

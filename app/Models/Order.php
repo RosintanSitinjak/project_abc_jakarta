@@ -13,6 +13,8 @@ class Order extends Model
 {
     use HasFactory, HasUuids, SoftDeletes;
 
+    protected $table = 'orders';
+
     protected $keyType = 'string';
     public $incrementing = false;
 
@@ -21,43 +23,60 @@ class Order extends Model
         'order_number',
         'total_amount',
         'remaining_amount',
-        'payment_method',
-        'payment_status',
-        'payment_proof',    // Simpan URL bukti (opsional)
-        'payment_proof_id', // PENTING: Tambahkan ini untuk relasi gambar
+        'shipping_fee',            // Biaya ekspedisi/ongkir
+        'delivery_method',        // 'pickup' atau 'delivery'
+        'shipping_payment_type',  // 'none', 'cod', atau 'prepaid'
+        'shipping_address',       // Alamat pengiriman riil
+        'notes',                  // Catatan tambahan dari pembeli
+        'payment_method',         // 'cash', 'transfer', 'qris', 'kredit'
+        'payment_status',         // 'pending', 'waiting_shipping_fee', 'unpaid', 'paid', 'cancelled'
+        'payment_proof',
+        'payment_proof_id',
         'due_date',
-        'shipping_status',
+        'shipping_status',        // 'pending', 'processing', 'shipping', 'delivered', 'cancelled'
         'tracking_number',
         'courier_name',
         'source',
     ];
 
-    // Relasi ke Pelanggan
+    protected $casts = [
+        'total_amount'     => 'integer',
+        'remaining_amount' => 'integer',
+        'shipping_fee'     => 'integer',
+        'due_date'         => 'datetime',
+        'created_at'       => 'datetime',
+        'updated_at'       => 'datetime',
+    ];
+
+    /**
+     * Relasi ke Pelanggan (Jemaat, PL, Gereja, Sekolah)
+     */
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class);
     }
 
-    // Relasi ke detail barang (Buku apa saja yang dibeli)
+    /**
+     * Relasi ke Item Buku yang dibeli
+     */
     public function items(): HasMany
     {
-        return $this->hasMany(OrderItem::class);
+        return $this->hasMany(OrderItem::class, 'order_id');
     }
 
     /**
-     * RELASI KE GAMBAR BUKTI PEMBAYARAN
-     * Menghubungkan ke tabel attachments
+     * Relasi ke Bukti Pembayaran (Attachments Polymorphic/Single)
      */
     public function thumbnail(): BelongsTo
     {
         return $this->belongsTo(Attachment::class, 'payment_proof_id');
     }
 
-            // Tambahkan relasi ini di dalam class Order
+    /**
+     * Relasi ke Riwayat Pembayaran Hutang / Cicilan
+     */
     public function payments(): HasMany
     {
-        // Mengacu ke tabel debt_payments yang kita buat kemarin
-        return $this->hasMany(DebtPayment::class, 'customer_id', 'customer_id')
-                    ->where('attachment_id', null); // Atau sesuaikan logika filternya
+        return $this->hasMany(DebtPayment::class, 'customer_id', 'customer_id');
     }
 }
