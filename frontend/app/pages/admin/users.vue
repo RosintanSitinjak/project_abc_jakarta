@@ -5,7 +5,7 @@
       <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
         <div class="min-w-0">
           <h2 class="text-xl font-bold text-[#1B293C]">Manajemen Pengguna</h2>
-          <p class="text-sm text-slate-500">Kontrol akses staff dan verifikasi akun pelanggan.</p>
+          <p class="text-sm text-slate-500">Kontrol akses staff, atur kredensial, dan verifikasi akun pelanggan.</p>
         </div>
         
         <div class="flex flex-wrap items-center gap-3">
@@ -76,47 +76,62 @@
             <template #default="{ row }">
               <template v-if="row.customer">
                 <el-tag v-if="row.customer.status === 'approved'" size="small" type="success" class="font-bold">AKTIF</el-tag>
-                <el-tag v-else-if="row.customer.status === 'pending'" size="small" type="warning" class="font-bold">PENDING</el-tag>
-                <el-tag v-else-if="row.customer.status === 'suspended'" size="small" type="info" class="font-bold">BLOKIR</el-tag>
-                <el-tag v-else size="small" type="danger" class="font-bold">DITOLAK</el-tag>
+                <el-tag v-else-if="row.customer.status === 'pending'" size="small" type="warning" class="font-bold animate-pulse">PENDING</el-tag>
+                <el-tag v-else-if="row.customer.status === 'suspended'" size="small" type="danger" class="font-bold">DIBEKUKAN</el-tag>
+                <el-tag v-else size="small" type="info" class="font-bold">DITOLAK</el-tag>
               </template>
               <span v-else class="text-slate-300">-</span>
             </template>
           </el-table-column>
 
-          <!-- KOLOM AKSI -->
-          <el-table-column label="Aksi" width="220" align="center">
+          <!-- KOLOM AKSI LENGKAP -->
+          <el-table-column label="Aksi" width="240" align="center">
             <template #default="{ row }">
-              <div class="flex justify-center gap-1.5">
-                <!-- FITUR WA: Kirim Kredensial Lengkap -->
-                <el-tooltip v-if="row.role === 3 && row.customer?.phone" content="Kirim Detail Login & Akun via WA" placement="top">
+              <div class="flex justify-center items-center gap-1.5">
+                <!-- 1. KIRIM KREDENSIAL WA -->
+                <el-tooltip v-if="row.role === 3 && row.customer?.phone" content="Kirim Detail Login via WA" placement="top">
                   <el-button circle size="small" type="success" @click="sendWhatsAppCredentials(row)">
-                    <Icon icon="solar:letter-bold" />
+                    <Icon icon="logos:whatsapp-icon" class="text-xs" />
                   </el-button>
                 </el-tooltip>
 
-                <!-- KHUSUS VERIFIKASI AKUN PL (STATUS PENDING) -->
+                <!-- 2. FITUR BARU: KIRIM LINK RESET PASSWORD VIA EMAIL -->
+                <el-tooltip v-if="row.email" content="Kirim Link Reset Password ke Email" placement="top">
+                  <el-button 
+                    circle 
+                    size="small" 
+                    type="info" 
+                    plain 
+                    :loading="loadingEmailReset === row.email"
+                    @click="sendEmailResetLink(row.email)"
+                  >
+                    <Icon icon="solar:key-minimalistic-square-bold" class="text-slate-600" />
+                  </el-button>
+                </el-tooltip>
+
+                <!-- 3. KHUSUS VERIFIKASI AKUN PL (STATUS PENDING) -->
                 <template v-if="row.customer?.type === 'penginjil' && row.customer?.status === 'pending'">
                   <el-button size="small" type="success" @click="handleApprove(row.customer.id)">Setujui PL</el-button>
                   <el-button size="small" type="danger" plain @click="openRejectModal(row.customer.id)">Tolak</el-button>
                 </template>
 
-                <!-- AKSI STANDAR PENGGUNA -->
+                <!-- 4. AKSI STANDAR PENGGUNA -->
                 <template v-else>
-                  <el-tooltip content="Edit Pengguna" placement="top">
+                  <!-- Edit Pengguna -->
+                  <el-tooltip content="Edit Data & Reset Password Manual" placement="top">
                     <el-button circle size="small" type="primary" plain @click="openEdit(row)">
                       <Icon icon="solar:pen-2-bold" />
                     </el-button>
                   </el-tooltip>
 
-                  <!-- Tombol Suspend / Aktifkan -->
-                  <el-tooltip v-if="row.customer" :content="row.customer.status === 'suspended' ? 'Buka Blokir Akun' : 'Bekukan / Blokir Akun'" placement="top">
+                  <!-- Suspend / Buka Blokir Akun -->
+                  <el-tooltip v-if="row.customer" :content="row.customer.status === 'suspended' ? 'Buka Blokir (Aktifkan Akun)' : 'Bekukan / Blokir Akun'" placement="top">
                     <el-button circle size="small" :type="row.customer.status === 'suspended' ? 'success' : 'warning'" plain @click="handleToggleStatus(row.customer.id)">
                       <Icon :icon="row.customer.status === 'suspended' ? 'solar:play-bold' : 'solar:stop-bold'" />
                     </el-button>
                   </el-tooltip>
 
-                  <!-- Tombol Hapus (Dilindungi: Akun Sendiri & Pimpinan Tidak Bisa Dihapus) -->
+                  <!-- Hapus Pengguna (Dilindungi: Akun Sendiri & Pimpinan) -->
                   <el-tooltip v-if="row.id !== authUser?.id && row.role !== 1" content="Hapus Pengguna" placement="top">
                     <el-button circle size="small" type="danger" plain @click="confirmDelete(row)">
                       <Icon icon="solar:trash-bin-trash-bold" />
@@ -191,9 +206,10 @@ import AdminShell from '~/components/Admin/Shell.vue';
 import { useApi } from '~/composables/useApi';
 
 const { apiFetch } = useApi();
-const users = ref([]);
+const users = ref<any[]>([]);
 const loading = ref(false);
 const loadingSubmit = ref(false);
+const loadingEmailReset = ref<string | null>(null);
 const authUser = useState<any>("auth-user", () => null);
 const searchQuery = ref('');
 const filterType = ref('');
@@ -208,12 +224,11 @@ const form = reactive({
   email: '', 
   role: 3, 
   customer_type: 'jemaat', 
-  phone: '',
+  phone: '', 
   password: '', 
   password_confirmation: ''
 });
 
-// Load Data Pengguna dengan URLSearchParams Bersih
 const loadUsers = async () => {
   loading.value = true;
   try {
@@ -282,25 +297,48 @@ const submitForm = async () => {
   }
 };
 
-// KIRIM KREDENSIAL LOGIN LENGKAP VIA WHATSAPP
+// KIRIM LINK RESET PASSWORD KE EMAIL VIA GMAIL SMTP
+const sendEmailResetLink = async (email: string) => {
+  try {
+    await ElMessageBox.confirm(
+      `Kirimkan link atur ulang kata sandi resmi ke alamat email "${email}"?`,
+      'Konfirmasi Kirim Email Reset',
+      { type: 'info', confirmButtonText: 'Kirim Email', cancelButtonText: 'Batal' }
+    );
+
+    loadingEmailReset.value = email;
+    await apiFetch('/auth/forgot-password', {
+      method: 'POST',
+      body: { email }
+    });
+
+    ElMessage.success(`Link reset password berhasil dikirim ke ${email}!`);
+  } catch (e: any) {
+    if (e !== 'cancel') {
+      ElMessage.error(e.data?.message || 'Gagal mengirim email reset.');
+    }
+  } finally {
+    loadingEmailReset.value = null;
+  }
+};
+
+// KIRIM KREDENSIAL LOGIN VIA WHATSAPP
 const sendWhatsAppCredentials = (row: any) => {
   const phone = row.customer?.phone;
   if (!phone) return ElMessage.warning('Nomor WhatsApp tidak tersedia.');
 
-  // Bersihkan format nomor HP
   let cleanPhone = phone.replace(/[^0-9]/g, '');
   if (cleanPhone.startsWith('0')) {
     cleanPhone = '62' + cleanPhone.slice(1);
   }
 
-  // Template Pesan Lengkap dengan Email & Info Password
   const message = 
     `Salam damai sejahtera Bpk/Ibu *${row.name}*,\n\n` +
-    `Akun Anda di sistem portal *Adventist Book Center (ABC) Jakarta* telah aktif dan siap digunakan! Berikut rincian akses login Anda:\n\n` +
+    `Akun Anda di sistem portal *Adventist Book Center (ABC) Jakarta* telah aktif! Berikut rincian akses login Anda:\n\n` +
     `📧 *Email Login*: ${row.email}\n` +
     `🔑 *Password*: Gunakan password yang Anda daftarkan (atau default: *12345678* jika dibuatkan oleh Admin)\n` +
     `🌐 *Link Login*: http://localhost:3000/login\n\n` +
-    `Silakan login untuk mulai memesan buku rohani, Buku Pelajaran Sekolah Sabat, dan literatur Advent dengan harga pelayanan Anda.\n\n` +
+    `Silakan login untuk memesan buku rohani, Buku Pelajaran Sekolah Sabat, dan literatur Advent secara mandiri.\n\n` +
     `Terima kasih dan Tuhan memberkati! 🙏`;
 
   const url = `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(message)}`;
@@ -342,14 +380,14 @@ const openRejectModal = async (id: string) => {
   }
 };
 
-// TOGGLE SUSPEND / AKTIFKAN AKUN
+// TOGGLE SUSPEND / AKTIFKAN AKUN (KINI SUDAH TERHUBUNG KE BACKEND)
 const handleToggleStatus = async (id: string) => { 
   try {
-    await apiFetch(`/customers/${id}/toggle-status`, { method: 'PATCH' }); 
-    ElMessage.success('Status akun diperbarui.');
+    const res: any = await apiFetch(`/customers/${id}/toggle-status`, { method: 'PATCH' }); 
+    ElMessage.success(res.message || 'Status akun berhasil diperbarui.');
     loadUsers(); 
-  } catch (e) {
-    ElMessage.error('Gagal mengubah status akun.');
+  } catch (e: any) {
+    ElMessage.error(e.data?.message || 'Gagal mengubah status akun.');
   }
 };
 
@@ -364,7 +402,7 @@ const confirmDelete = async (row: any) => {
     
     await apiFetch(`/user-management/${row.id}`, { method: 'DELETE' }); 
     ElMessage.success('Pengguna berhasil dihapus.');
-    loadUsers();
+    loadUsers(); 
   } catch (e: any) {
     if (e !== 'cancel') {
       ElMessage.error(e.data?.message || 'Gagal menghapus pengguna.');
@@ -372,7 +410,6 @@ const confirmDelete = async (row: any) => {
   }
 };
 
-// Auto-reload saat filter diubah atau di-clear
 watch([filterType, filterStatus], () => loadUsers());
 watch(searchQuery, (newVal) => {
   if (!newVal || newVal.trim() === '') loadUsers();

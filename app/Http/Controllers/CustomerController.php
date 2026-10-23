@@ -90,10 +90,8 @@ class CustomerController extends Controller
             ->get();
 
         $history->transform(function ($item) {
-            // Cek apakah file fisik ada atau format path valid
             $item->proof_url = $item->image_path ? asset('storage/' . $item->image_path) : null;
             
-            // Rapikan metode pembayaran agar tidak tertulis 'KREDIT' di kartu cicilan
             if (strtolower((string)$item->payment_method) === 'kredit') {
                 $item->payment_method = 'Uang Muka (DP)';
             }
@@ -114,7 +112,6 @@ class CustomerController extends Controller
         $customer = Customer::findOrFail($id);
         
         return DB::transaction(function () use ($customer, $request) {
-            // Pastikan nominal bayar tidak melebihi sisa hutang
             $deductAmount = min((float)$request->amount, (float)$customer->current_debt);
 
             DB::table('debt_payments')->insert([
@@ -167,6 +164,23 @@ class CustomerController extends Controller
 
         return response()->json([
             'message'  => 'Akun Penginjil Literatur telah ditolak.',
+            'customer' => $customer
+        ]);
+    }
+
+    /**
+     * BEKUKAN / BUKA BLOKIR AKUN PELANGGAN (SUSPEND / ACTIVATE)
+     */
+    public function toggleStatus($id): JsonResponse
+    {
+        $customer = Customer::findOrFail($id);
+        $newStatus = ($customer->status === 'suspended') ? 'approved' : 'suspended';
+        
+        $customer->update(['status' => $newStatus]);
+
+        return response()->json([
+            'message'  => $newStatus === 'suspended' ? 'Akun berhasil dibekukan (diblokir).' : 'Akun berhasil diaktifkan kembali.',
+            'status'   => $newStatus,
             'customer' => $customer
         ]);
     }
