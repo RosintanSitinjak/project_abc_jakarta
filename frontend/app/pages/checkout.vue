@@ -2,7 +2,7 @@
   <div class="min-h-screen bg-[#f8fafc] py-10 md:py-16 text-gray-800">
     <div class="container mx-auto px-6 max-w-5xl">
       
-      <!-- Navigasi / Header -->
+      <!-- Navigasi Atas -->
       <div class="mb-8 flex items-center justify-between">
         <NuxtLink to="/cart" class="inline-flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-[#00a9c3] transition">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -15,7 +15,7 @@
 
       <div class="mb-8">
         <h1 class="text-2xl md:text-3xl font-black text-gray-900 tracking-tight">Checkout Pesanan</h1>
-        <p class="text-gray-500 text-xs sm:text-sm mt-1">Lengkapi data pengiriman dan unggah bukti pembayaran Anda.</p>
+        <p class="text-gray-500 text-xs sm:text-sm mt-1">Pilih jalur pengiriman dan selesaikan pesanan literatur Anda.</p>
       </div>
 
       <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
@@ -58,72 +58,100 @@
                 <input 
                   v-model="orderForm.customer_phone" 
                   type="tel" 
-                  placeholder="Contoh: 081234567890 (Untuk konfirmasi pengiriman & resi)" 
+                  placeholder="Contoh: 081234567890 (Untuk konfirmasi paket & resi pengiriman)" 
                   class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-[#00a9c3] focus:ring-2 focus:ring-[#00a9c3]/20 outline-none text-xs transition"
                 />
               </div>
             </div>
           </div>
 
-          <!-- 2. METODE PENGIRIMAN -->
+          <!-- 2. PILIHAN JALUR PENGIRIMAN -->
           <div class="bg-white rounded-3xl p-6 md:p-8 border border-gray-100 shadow-sm">
             <h2 class="text-sm font-black text-gray-900 uppercase tracking-wider mb-4 pb-2 border-b border-gray-100">
               2. Metode Pengiriman
             </h2>
 
             <div class="space-y-3.5 mb-6">
-              <!-- Jalur 1: Pick Up Tebet -->
+              
+              <!-- JALUR 1: Ambil Sendiri (Pick Up Tebet) -->
               <div 
-                @click="orderForm.shipping_type = 'pickup'" 
+                @click="setShippingRoute('pickup')" 
                 :class="[
                   'p-4 sm:p-5 rounded-2xl border-2 cursor-pointer transition-all flex items-start gap-3.5',
-                  orderForm.shipping_type === 'pickup' 
+                  orderForm.shipping_route === 'pickup' 
                     ? 'border-[#00a9c3] bg-[#00a9c3]/5 shadow-sm' 
                     : 'border-gray-200 hover:border-gray-300 bg-white'
                 ]"
               >
-                <div class="w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 mt-0.5" :class="orderForm.shipping_type === 'pickup' ? 'border-[#00a9c3]' : 'border-gray-300'">
-                  <div v-if="orderForm.shipping_type === 'pickup'" class="w-2 h-2 rounded-full bg-[#00a9c3]"></div>
+                <div class="w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 mt-0.5" :class="orderForm.shipping_route === 'pickup' ? 'border-[#00a9c3]' : 'border-gray-300'">
+                  <div v-if="orderForm.shipping_route === 'pickup'" class="w-2 h-2 rounded-full bg-[#00a9c3]"></div>
                 </div>
                 <div class="flex-1">
                   <div class="flex items-center justify-between">
-                    <h3 class="font-black text-xs sm:text-sm text-gray-900">Ambil Sendiri (Pick Up)</h3>
-                    <span class="text-[10px] font-black uppercase text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">Bebas Ongkir (Rp 0)</span>
+                    <h3 class="font-black text-xs sm:text-sm text-gray-900">Jalur 1: Ambil Sendiri (Pick Up)</h3>
+                    <span class="text-[10px] font-black uppercase text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">Ongkir Rp 0 (Bebas Ongkir)</span>
                   </div>
                   <p class="text-[11px] text-gray-500 mt-1 leading-relaxed">
-                    Ambil langsung di kantor <b>Adventist Book Center (ABC) Jakarta, Tebet</b>.
+                    Total tagihan murni hanya harga buku. Ambil langsung di kantor <b>Adventist Book Center (ABC) Jakarta, Tebet</b>.
                   </p>
                 </div>
               </div>
 
-              <!-- Jalur 2: Ekspedisi Kurir -->
+              <!-- JALUR 2: Ekspedisi Opsi A (Bayar Ongkir di Tempat / DFO Kurir) -->
               <div 
-                @click="orderForm.shipping_type = 'delivery'" 
+                @click="setShippingRoute('delivery_dfo')" 
                 :class="[
                   'p-4 sm:p-5 rounded-2xl border-2 cursor-pointer transition-all flex items-start gap-3.5',
-                  orderForm.shipping_type === 'delivery' 
+                  orderForm.shipping_route === 'delivery_dfo' 
                     ? 'border-[#00a9c3] bg-[#00a9c3]/5 shadow-sm' 
                     : 'border-gray-200 hover:border-gray-300 bg-white'
                 ]"
               >
-                <div class="w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 mt-0.5" :class="orderForm.shipping_type === 'delivery' ? 'border-[#00a9c3]' : 'border-gray-300'">
-                  <div v-if="orderForm.shipping_type === 'delivery'" class="w-2 h-2 rounded-full bg-[#00a9c3]"></div>
+                <div class="w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 mt-0.5" :class="orderForm.shipping_route === 'delivery_dfo' ? 'border-[#00a9c3]' : 'border-gray-300'">
+                  <div v-if="orderForm.shipping_route === 'delivery_dfo'" class="w-2 h-2 rounded-full bg-[#00a9c3]"></div>
                 </div>
                 <div class="flex-1">
                   <div class="flex items-center justify-between">
-                    <h3 class="font-black text-xs sm:text-sm text-gray-900">Ekspedisi / Kurir Pengiriman</h3>
-                    <span class="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">Diatur Kantor ABC</span>
+                    <h3 class="font-black text-xs sm:text-sm text-gray-900">Jalur 2: Ekspedisi – Bayar Ongkir di Tempat (DFO / COD Kurir)</h3>
+                    <span class="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">COD Ongkir</span>
                   </div>
                   <p class="text-[11px] text-gray-500 mt-1 leading-relaxed">
-                    Pengiriman paket diatur langsung oleh admin ABC Jakarta (J&T / JNE / Cargo).
+                    Tagihan web murni seharga buku. Biaya ongkir dibayarkan langsung kepada kurir ekspedisi saat paket tiba di alamat Anda.
                   </p>
                 </div>
               </div>
+
+              <!-- JALUR 3: Ekspedisi Opsi B (Bayar Ongkir Sekaligus - Dihitung Admin) -->
+              <div 
+                @click="setShippingRoute('delivery_prepaid')" 
+                :class="[
+                  'p-4 sm:p-5 rounded-2xl border-2 cursor-pointer transition-all flex items-start gap-3.5',
+                  orderForm.shipping_route === 'delivery_prepaid' 
+                    ? 'border-[#00a9c3] bg-[#00a9c3]/5 shadow-sm' 
+                    : 'border-gray-200 hover:border-gray-300 bg-white'
+                ]"
+              >
+                <div class="w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 mt-0.5" :class="orderForm.shipping_route === 'delivery_prepaid' ? 'border-[#00a9c3]' : 'border-gray-300'">
+                  <div v-if="orderForm.shipping_route === 'delivery_prepaid'" class="w-2 h-2 rounded-full bg-[#00a9c3]"></div>
+                </div>
+                <div class="flex-1">
+                  <div class="flex items-center justify-between">
+                    <h3 class="font-black text-xs sm:text-sm text-gray-900">Jalur 3: Ekspedisi – Bayar Ongkir Sekaligus (Dihitung Admin)</h3>
+                    <span class="text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">1 Kali Transfer</span>
+                  </div>
+                  <p class="text-[11px] text-gray-500 mt-1 leading-relaxed">
+                    Pesanan dibuat terlebih dahulu (Belum bayar). Admin akan menimbang buku & menginput tarif ongkir, lalu total akhir dibayar di halaman <b>Pesanan Saya</b>.
+                  </p>
+                </div>
+              </div>
+
             </div>
 
-            <!-- Formulir Alamat Pengiriman jika Ekspedisi -->
-            <div v-if="orderForm.shipping_type === 'delivery'" class="space-y-4 pt-4 border-t border-gray-100">
-              <h3 class="font-bold text-xs text-gray-900">Alamat Tujuan Pengiriman Ekspedisi</h3>
+            <!-- DETAIL KONDISIONAL BERDASARKAN JALUR PENGIRIMAN -->
+
+            <!-- Form Alamat untuk Ekspedisi (Jalur 2 & Jalur 3) -->
+            <div v-if="orderForm.shipping_route !== 'pickup'" class="space-y-4 pt-4 border-t border-gray-100">
+              <h3 class="font-bold text-xs text-gray-900">Alamat Lengkap Tujuan Pengiriman Ekspedisi</h3>
               <div>
                 <label class="block text-gray-700 font-bold text-xs mb-1">
                   Alamat Lengkap <span class="text-rose-500">*</span>
@@ -132,7 +160,7 @@
                   v-model="orderForm.shipping_address" 
                   rows="3" 
                   placeholder="Nama jalan, nomor rumah, RT/RW, kelurahan, kecamatan..."
-                  class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-[#00a9c3] outline-none text-xs transition"
+                  class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-[#00a9c3] focus:ring-2 focus:ring-[#00a9c3]/20 outline-none text-xs transition"
                 ></textarea>
               </div>
 
@@ -158,9 +186,19 @@
                   />
                 </div>
               </div>
+
+              <!-- Banner Info Jalur 2 (DFO) -->
+              <div v-if="orderForm.shipping_route === 'delivery_dfo'" class="p-3.5 bg-blue-50/80 rounded-2xl border border-blue-200 text-xs text-blue-900 leading-relaxed">
+                🚚 <b>Keterangan Ekspedisi DFO:</b> Biaya ongkir dibayarkan langsung kepada kurir ekspedisi saat paket tiba di alamat Anda.
+              </div>
+
+              <!-- Banner Info Jalur 3 (Ongkir Sekaligus) -->
+              <div v-if="orderForm.shipping_route === 'delivery_prepaid'" class="p-3.5 bg-amber-50 rounded-2xl border border-amber-200 text-xs text-amber-900 leading-relaxed">
+                ⏳ <b>Keterangan Ongkir Sekaligus:</b> Pesanan dibuat dengan status <b>Menunggu Konfirmasi Ongkir (Belum bayar)</b>. Admin akan menimbang buku, menginput ongkir, lalu Anda mentransfer total akhir di menu <b>Pesanan Saya (My Orders)</b>.
+              </div>
             </div>
 
-            <!-- Detail Ambil Sendiri -->
+            <!-- Detail Ambil Sendiri (Jalur 1) -->
             <div v-else class="p-4 bg-emerald-50/60 rounded-2xl border border-emerald-200 text-xs text-emerald-950 leading-relaxed">
               📍 <b>Lokasi Pengambilan Buku:</b><br/>
               <b>Kantor Adventist Book Center (ABC) Jakarta</b><br/>
@@ -171,14 +209,21 @@
             </div>
           </div>
 
-          <!-- 3. METODE PEMBAYARAN & UPLOAD BUKTI LANGSUNG -->
+          <!-- 3. METODE PEMBAYARAN -->
           <div class="bg-white rounded-3xl p-6 md:p-8 border border-gray-100 shadow-sm">
             <h2 class="text-sm font-black text-gray-900 uppercase tracking-wider mb-4 pb-2 border-b border-gray-100">
               3. Metode Pembayaran
             </h2>
 
-            <div class="space-y-4">
-              <!-- Opsi 1: QRIS / Transfer Bank Mandiri -->
+            <!-- KONDISI JALUR 3: Pembayaran Ditunda sampai Admin Input Ongkir -->
+            <div v-if="orderForm.shipping_route === 'delivery_prepaid'" class="p-4 bg-gray-50 rounded-2xl border border-gray-200 text-xs text-gray-600 leading-relaxed">
+              Pembayaran ditunda sementara sampai admin ABC Jakarta menginput nominal ongkir resmi. Anda akan mentransfer total akhir pada halaman <b>Pesanan Saya</b>.
+            </div>
+
+            <!-- KONDISI JALUR 1 & JALUR 2: Pilih Metode Pembayaran Sekarang -->
+            <div v-else class="space-y-4">
+              
+              <!-- Opsi A: Transfer Bank Mandiri / QRIS (Semua User) -->
               <label 
                 class="flex items-start gap-3 p-4 rounded-2xl border-2 cursor-pointer transition"
                 :class="orderForm.payment_method === 'transfer' ? 'border-[#00a9c3] bg-[#00a9c3]/5' : 'border-gray-200/80 hover:border-gray-300'"
@@ -186,34 +231,34 @@
                 <input type="radio" value="transfer" v-model="orderForm.payment_method" class="mt-1 accent-[#00a9c3]" />
                 <div class="flex-1">
                   <div class="flex items-center justify-between">
-                    <span class="font-bold text-gray-900 text-xs block">QRIS / Transfer Bank Mandiri (Lunas)</span>
+                    <span class="font-bold text-gray-900 text-xs block">Transfer Bank Mandiri / QRIS</span>
                     <span class="text-[9px] bg-blue-100 text-[#00a9c3] font-bold px-2 py-0.5 rounded">Instan</span>
                   </div>
                   <p class="text-gray-400 text-[11px] mt-0.5">
-                    Transfer langsung dan lampirkan bukti struk di bawah ini sebelum membuat pesanan.
+                    Transfer ke rekening resmi Bank Mandiri ABC Jakarta sekarang dan lampirkan struk pembayaran.
                   </p>
                 </div>
               </label>
 
-              <!-- Opsi 2: Bayar Tunai saat Ambil di Toko (Khusus Pick Up) -->
+              <!-- Opsi B: Tunai saat Ambil di Toko (HANYA MUNCUL DI JALUR 1 PICK UP) -->
               <label 
-                v-if="orderForm.shipping_type === 'pickup'"
+                v-if="orderForm.shipping_route === 'pickup'"
                 class="flex items-start gap-3 p-4 rounded-2xl border-2 cursor-pointer transition"
                 :class="orderForm.payment_method === 'cash_pickup' ? 'border-[#00a9c3] bg-[#00a9c3]/5' : 'border-gray-200/80 hover:border-gray-300'"
               >
                 <input type="radio" value="cash_pickup" v-model="orderForm.payment_method" class="mt-1 accent-[#00a9c3]" />
                 <div class="flex-1">
                   <div class="flex items-center justify-between">
-                    <span class="font-bold text-gray-900 text-xs block">Bayar Tunai di Kasir Kantor</span>
-                    <span class="text-[9px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded">Bayar di Tebet</span>
+                    <span class="font-bold text-gray-900 text-xs block">Bayar Tunai di Kasir Kantor (Tebet)</span>
+                    <span class="text-[9px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded">Bayar di Tempat</span>
                   </div>
                   <p class="text-gray-400 text-[11px] mt-0.5">
-                    Pembayaran langsung di kasir ABC Jakarta saat mengambil buku fisik.
+                    Pembayaran langsung secara tunai saat mengambil buku di kantor ABC Jakarta.
                   </p>
                 </div>
               </label>
 
-              <!-- Opsi 3: Kredit / Tempo (Khusus PL/Gereja/Sekolah) -->
+              <!-- Opsi C: Kredit / Piutang Tempo (HANYA UNTUK PL, GEREJA, SEKOLAH) -->
               <label 
                 v-if="canUseCredit"
                 class="flex items-start gap-3 p-4 rounded-2xl border-2 cursor-pointer transition"
@@ -222,17 +267,22 @@
                 <input type="radio" value="credit" v-model="orderForm.payment_method" class="mt-1 accent-[#00a9c3]" />
                 <div class="flex-1">
                   <div class="flex items-center justify-between">
-                    <span class="font-bold text-gray-900 text-xs block">Kredit / Tempo (Fasilitas Khusus Kemitraan)</span>
+                    <span class="font-bold text-gray-900 text-xs block">Kredit / Piutang (Fasilitas Khusus Kemitraan)</span>
                     <span class="text-[9px] bg-purple-100 text-purple-800 font-bold px-2 py-0.5 rounded">Maks Rp 5.000.000</span>
                   </div>
                   <p class="text-gray-400 text-[11px] mt-0.5">
-                    Cicilan tempo siklus 30 hari khusus akun Penginjil Literatur (PL).
+                    Fasilitas pembayaran tempo siklus 30 hari khusus akun Penginjil Literatur / Lembaga.
                   </p>
                 </div>
               </label>
 
+              <!-- Pesan jika Jemaat -->
+              <div v-else-if="orderForm.shipping_route !== 'pickup'" class="p-3 bg-gray-50 rounded-xl border border-gray-200 text-[11px] text-gray-500 italic">
+                *Akun Jemaat Umum menggunakan metode pembayaran Transfer/QRIS.
+              </div>
+
               <!-- ======================================================== -->
-              <!-- BOX INFO REKENING & UPLOAD BUKTI TRANSFER LANGSUNG       -->
+              <!-- BOX REKENING MANDIRI & UPLOAD STRUK LANGSUNG             -->
               <!-- ======================================================== -->
               <div v-if="orderForm.payment_method === 'transfer'" class="mt-4 p-5 rounded-3xl bg-slate-900 text-white space-y-4 shadow-md">
                 <div>
@@ -326,16 +376,29 @@
             </div>
             
             <div class="flex justify-between text-gray-500">
-              <span>Pengiriman</span>
-              <span class="font-bold text-right" :class="orderForm.shipping_type === 'pickup' ? 'text-emerald-600' : 'text-gray-900'">
-                {{ orderForm.shipping_type === 'pickup' ? 'Ambil Sendiri (Rp 0)' : 'Ekspedisi Kurir' }}
+              <span>Skema Pengiriman</span>
+              <span class="font-bold text-right" :class="orderForm.shipping_route === 'pickup' ? 'text-emerald-600' : 'text-gray-900'">
+                {{ shippingLabelShort }}
+              </span>
+            </div>
+
+            <div class="flex justify-between text-gray-500">
+              <span>Ongkos Kirim</span>
+              <span class="font-bold text-right">
+                <template v-if="orderForm.shipping_route === 'pickup'">Rp 0 (Bebas Ongkir)</template>
+                <template v-else-if="orderForm.shipping_route === 'delivery_dfo'">Bayar ke Kurir (DFO)</template>
+                <template v-else>Dihitung Admin</template>
               </span>
             </div>
 
             <div class="flex justify-between text-sm font-black text-gray-900 pt-3 border-t border-gray-100">
-              <span>Total Tagihan Buku</span>
+              <span>{{ orderForm.shipping_route === 'delivery_prepaid' ? 'Tagihan Buku Saja' : 'Total Tagihan' }}</span>
               <span class="text-base text-[#00a9c3]">{{ formatRupiah(subtotal) }}</span>
             </div>
+
+            <p v-if="orderForm.shipping_route === 'delivery_prepaid'" class="text-[10px] text-amber-600 italic leading-tight mt-1">
+              *Ongkos kirim akan ditambahkan setelah admin menimbang paket buku Anda.
+            </p>
           </div>
 
           <!-- Tombol Konfirmasi Pesanan -->
@@ -344,7 +407,7 @@
             @click="handlePlaceOrder"
             class="w-full py-4 rounded-2xl bg-[#00a9c3] text-white text-xs font-black uppercase tracking-widest shadow-lg shadow-[#00a9c3]/30 hover:bg-[#0092a8] active:scale-95 disabled:opacity-50 transition"
           >
-            {{ submitting ? 'Memproses Pesanan...' : 'Konfirmasi & Buat Pesanan' }}
+            {{ submitButtonText }}
           </button>
         </div>
 
@@ -398,13 +461,21 @@ const orderForm = reactive({
   customer_name: authUser.value?.name || '',
   customer_email: authUser.value?.email || '',
   customer_phone: authUser.value?.customer?.phone || '',
-  shipping_type: 'pickup', // 'pickup' atau 'delivery'
+  // 3 Jalur: 'pickup' | 'delivery_dfo' | 'delivery_prepaid'
+  shipping_route: 'pickup',
   shipping_address: authUser.value?.customer?.address || '',
   shipping_city: '',
   shipping_postal_code: '',
-  payment_method: 'transfer', // default: transfer bank / QRIS
+  payment_method: 'transfer',
   notes: ''
 })
+
+const setShippingRoute = (route: string) => {
+  orderForm.shipping_route = route
+  if (route !== 'pickup' && orderForm.payment_method === 'cash_pickup') {
+    orderForm.payment_method = 'transfer'
+  }
+}
 
 // State Unggah Bukti Transfer
 const proofFile = ref<File | null>(null)
@@ -427,11 +498,20 @@ const removeProof = () => {
   }
 }
 
-// Watcher pergantian metode pengiriman
-watch(() => orderForm.shipping_type, (newType) => {
-  if (newType !== 'pickup' && orderForm.payment_method === 'cash_pickup') {
-    orderForm.payment_method = 'transfer'
+// Label Singkat di Ringkasan
+const shippingLabelShort = computed(() => {
+  if (orderForm.shipping_route === 'pickup') return 'Ambil Sendiri'
+  if (orderForm.shipping_route === 'delivery_dfo') return 'Ekspedisi (DFO)'
+  return 'Ekspedisi (Hitung Admin)'
+})
+
+// Teks Tombol
+const submitButtonText = computed(() => {
+  if (submitting.value) return 'Memproses Pesanan...'
+  if (orderForm.shipping_route === 'delivery_prepaid') {
+    return 'Konfirmasi & Tunggu Konfirmasi Ongkir'
   }
+  return 'Konfirmasi & Buat Pesanan'
 })
 
 // Validasi Keranjang saat masuk halaman
@@ -450,16 +530,16 @@ const handlePlaceOrder = async () => {
     return
   }
 
-  // 2. Validasi Alamat jika pengiriman Ekspedisi
-  if (orderForm.shipping_type === 'delivery') {
+  // 2. Validasi Alamat jika pengiriman Ekspedisi (Jalur 2 & 3)
+  if (orderForm.shipping_route !== 'pickup') {
     if (!orderForm.shipping_address.trim() || !orderForm.shipping_city.trim()) {
       ElMessage.warning('Mohon lengkapi Alamat dan Kota tujuan pengiriman ekspedisi.')
       return
     }
   }
 
-  // 3. Validasi Bukti Transfer Langsung
-  if (orderForm.payment_method === 'transfer') {
+  // 3. Validasi Bukti Transfer Langsung (Wajib jika pilih Transfer pada Jalur 1 & Jalur 2)
+  if (orderForm.shipping_route !== 'delivery_prepaid' && orderForm.payment_method === 'transfer') {
     if (!proofFile.value) {
       ElMessage.warning('Mohon unggah foto struk bukti transfer pembayaran Anda terlebih dahulu.')
       return
@@ -470,7 +550,7 @@ const handlePlaceOrder = async () => {
   try {
     let paymentProofId: string | null = null
 
-    // UPLOAD FOTO STRUK DULU KE SERVER
+    // UPLOAD FOTO STRUK DULU KE SERVER (Jika ada berkas struk)
     if (proofFile.value) {
       const attachment = await uploadAttachment(proofFile.value, {
         attachmentableType: 'order',
@@ -479,24 +559,28 @@ const handlePlaceOrder = async () => {
       paymentProofId = attachment.id
     }
 
-    // Susun data pesanan yang cocok dengan Controller Intan
+    // Mapping nilai ke kolom database sesuai controller Intan
+    const deliveryMethod = orderForm.shipping_route === 'pickup' ? 'pickup' : 'delivery'
+    let shippingPaymentType = 'none'
+    if (orderForm.shipping_route === 'delivery_dfo') shippingPaymentType = 'dfo'
+    if (orderForm.shipping_route === 'delivery_prepaid') shippingPaymentType = 'prepaid'
+
     const payload = {
       customer_id: authUser.value?.customer?.id,
       customer_name: orderForm.customer_name,
       customer_email: orderForm.customer_email,
       customer_phone: orderForm.customer_phone,
-      // Dikirim keduanya agar cocok dengan kolom backend Intan:
-      delivery_method: orderForm.shipping_type,
-      shipping_type: orderForm.shipping_type,
-      shipping_payment_type: orderForm.shipping_type === 'pickup' ? 'none' : 'dfo',
+      delivery_method: deliveryMethod,
+      shipping_type: orderForm.shipping_route,
+      shipping_payment_type: shippingPaymentType,
       shipping_fee: 0,
-      shipping_address: orderForm.shipping_type === 'pickup' 
+      shipping_address: orderForm.shipping_route === 'pickup' 
         ? 'Ambil Sendiri di Kantor ABC Jakarta (Tebet)'
         : `${orderForm.shipping_address}, ${orderForm.shipping_city} ${orderForm.shipping_postal_code}`,
-      payment_method: orderForm.payment_method,
-      payment_proof_id: paymentProofId, // ID struk langsung tersemat di pesanan!
-      payment_status: paymentProofId ? 'unpaid' : 'unpaid',
-      shipping_status: 'pending',
+      payment_method: orderForm.shipping_route === 'delivery_prepaid' ? 'pending_calculation' : orderForm.payment_method,
+      payment_proof_id: paymentProofId,
+      payment_status: 'unpaid',
+      shipping_status: orderForm.shipping_route === 'delivery_prepaid' ? 'waiting_shipping_fee' : 'pending',
       notes: orderForm.notes || null,
       total_amount: subtotal.value,
       source: 'web',
@@ -515,12 +599,21 @@ const handlePlaceOrder = async () => {
       body: payload
     })
 
-    ElNotification({
-      title: 'Pesanan Berhasil Dibuat!',
-      message: 'Pesanan beserta bukti pembayaran Anda telah diterima. Admin ABC akan segera memverifikasinya.',
-      type: 'success',
-      duration: 6000
-    })
+    if (orderForm.shipping_route === 'delivery_prepaid') {
+      ElNotification({
+        title: 'Pesanan Dibuat (Menunggu Ongkir)',
+        message: 'Pesanan Anda telah dicatat. Admin ABC akan segera menginput ongkir pada pesanan Anda.',
+        type: 'info',
+        duration: 6000
+      })
+    } else {
+      ElNotification({
+        title: 'Pesanan Berhasil Dibuat!',
+        message: 'Pesanan beserta bukti pembayaran Anda telah diterima. Admin ABC akan segera memverifikasinya.',
+        type: 'success',
+        duration: 6000
+      })
+    }
 
     // Bersihkan file dan keranjang belanja
     removeProof()

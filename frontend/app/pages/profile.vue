@@ -45,10 +45,10 @@
       <!-- 2. KONTEN TAB UTAMA -->
       <div class="bg-white rounded-3xl p-6 md:p-8 border border-gray-100 shadow-sm">
         
-        <!-- Tab Bar Navigasi -->
+        <!-- Tab Bar Navigasi (Dinamis: Piutang otomatis muncul untuk PL / Gereja / Sekolah) -->
         <div class="flex items-center gap-2 border-b border-gray-100 pb-4 mb-8 overflow-x-auto">
           <button 
-            v-for="tab in tabs" 
+            v-for="tab in availableTabs" 
             :key="tab.id"
             @click="setTab(tab.id)"
             :class="[
@@ -60,6 +60,10 @@
           >
             <span>{{ tab.icon }}</span>
             <span>{{ tab.label }}</span>
+            <!-- Badge Tempo Khusus Tab Piutang -->
+            <span v-if="tab.id === 'piutang'" class="px-1.5 py-0.2 rounded-full text-[9px] bg-white text-[#00a9c3] font-black uppercase">
+              Tempo
+            </span>
           </button>
         </div>
 
@@ -216,7 +220,195 @@
         </div>
 
         <!-- ============================================== -->
-        <!-- TAB 3: VOUCHER                                 -->
+        <!-- TAB BARU: PIUTANG & KREDIT TEMPO (PL & LEMBAGA) -->
+        <!-- ============================================== -->
+        <div v-else-if="activeTab === 'piutang'" class="space-y-6">
+          
+          <!-- BANNER METRIK RINGKASAN KREDIT -->
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <!-- Saldo Hutang Berjalan -->
+            <div class="p-5 rounded-3xl bg-rose-50/60 border border-rose-200/80">
+              <span class="text-[10px] font-bold text-rose-500 uppercase tracking-wider block">Total Hutang Berjalan</span>
+              <p class="text-xl sm:text-2xl font-black text-rose-600 mt-1">{{ formatRupiah(totalRemainingDebt) }}</p>
+              <p class="text-[11px] text-gray-500 mt-1 font-medium">Dari {{ debtOrders.length }} faktur belanja tempo</p>
+            </div>
+
+            <!-- Sisa Plafon Belanja -->
+            <div class="p-5 rounded-3xl bg-[#00a9c3]/10 border border-[#00a9c3]/30">
+              <span class="text-[10px] font-bold text-[#00a9c3] uppercase tracking-wider block">Sisa Plafon Belanja</span>
+              <p class="text-xl sm:text-2xl font-black text-[#00a9c3] mt-1">{{ formatRupiah(availableCreditLimit) }}</p>
+              <p class="text-[11px] text-gray-500 mt-1 font-medium">Batas belanja tempo yang tersedia</p>
+            </div>
+
+            <!-- Plafon Maksimal -->
+            <div class="p-5 rounded-3xl bg-gray-50 border border-gray-200/80">
+              <span class="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Plafon Maksimal</span>
+              <p class="text-xl sm:text-2xl font-black text-gray-800 mt-1">{{ formatRupiah(userCreditLimit) }}</p>
+              <p class="text-[11px] text-gray-500 mt-1 font-medium">Batas limit kredit mitra ABC</p>
+            </div>
+          </div>
+
+          <!-- PEMBERITAHUAN KEBIJAKAN FLEKSIBEL -->
+          <div class="p-4 rounded-2xl bg-white border border-[#00a9c3]/30 shadow-sm flex items-start gap-3">
+            <span class="text-xl shrink-0">🤝</span>
+            <div class="text-xs">
+              <p class="font-bold text-gray-900">Cicilan Fleksibel Bebas Nominal & Waktu</p>
+              <p class="text-gray-500 mt-0.5 leading-relaxed">
+                Anda dapat menyetor cicilan berapapun tanpa denda atau bunga. Cukup transfer ke Bank Mandiri ABC Jakarta dan unggah foto struknya. Setoran akan diverifikasi manual oleh kasir.
+              </p>
+            </div>
+          </div>
+
+          <!-- HEADER DAFTAR FAKTUR PIUTANG -->
+          <div class="flex items-center justify-between pt-2">
+            <div>
+              <h2 class="text-base font-black text-gray-900 tracking-tight">Faktur Piutang & Cicilan Berjalan</h2>
+              <p class="text-xs text-gray-400 mt-0.5">Daftar pesanan dengan metode kredit tempo yang memiliki sisa tagihan.</p>
+            </div>
+            <button @click="fetchOrders" class="text-xs text-[#00a9c3] font-bold hover:underline flex items-center gap-1">
+              🔄 Muat Ulang
+            </button>
+          </div>
+
+          <!-- KOSONG (LUNAS SEMUA) -->
+          <div v-if="debtOrders.length === 0" class="py-14 text-center border-2 border-dashed border-emerald-200 bg-emerald-50/30 rounded-3xl p-8 max-w-md mx-auto">
+            <span class="text-4xl block mb-2">🎉</span>
+            <p class="text-sm font-black text-emerald-800">Semua Tagihan Piutang Lunas</p>
+            <p class="text-xs text-gray-500 mt-1 mb-4">Anda tidak memiliki tagihan piutang berjalan saat ini.</p>
+            <NuxtLink to="/katalog" class="inline-block px-5 py-2.5 rounded-xl bg-[#00a9c3] text-white text-xs font-bold uppercase tracking-wider shadow-sm hover:bg-[#0092a8] transition">
+              Gunakan Plafon untuk Belanja
+            </NuxtLink>
+          </div>
+
+          <!-- DAFTAR KARTU FAKTUR PIUTANG (DESAIN SAMA DENGAN BUYING) -->
+          <div v-else class="space-y-4">
+            <div 
+              v-for="order in debtOrders" 
+              :key="order.id"
+              class="p-5 sm:p-6 rounded-3xl border border-gray-200/80 bg-white hover:border-[#00a9c3] hover:shadow-md transition-all cursor-pointer group space-y-4"
+              @click="openOrderDetail(order)"
+            >
+              <!-- Baris Atas: Nomor Faktur & Status -->
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-gray-100 text-xs">
+                <div>
+                  <span class="font-black text-gray-900 text-sm tracking-wider group-hover:text-[#00a9c3] transition-colors">
+                    {{ order.order_number }}
+                  </span>
+                  <span class="text-gray-400 ml-2 block sm:inline text-[11px]">{{ formatDate(order.created_at) }}</span>
+                </div>
+                
+                <div class="flex items-center gap-2" @click.stop>
+                  <!-- Badge Status Cicilan -->
+                  <span 
+                    :class="[
+                      'px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider',
+                      (order.paid_amount || 0) > 0 ? 'bg-amber-50 text-amber-700 border border-amber-200' : 'bg-rose-50 text-rose-700 border border-rose-200'
+                    ]"
+                  >
+                    {{ (order.paid_amount || 0) > 0 ? 'Sebagian Dicicil' : 'Belum Dicicil' }}
+                  </span>
+
+                  <!-- Status Tempo -->
+                  <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-[#00a9c3]/10 text-[#00a9c3] border border-[#00a9c3]/20">
+                    Kredit Tempo
+                  </span>
+                </div>
+              </div>
+
+              <!-- Rincian Buku Singkat -->
+              <div class="text-xs text-gray-600 space-y-1.5 bg-gray-50/70 p-3.5 rounded-2xl">
+                <div v-for="(item, idx) in order.items?.slice(0, 2)" :key="idx" class="flex justify-between items-center gap-2">
+                  <span class="font-medium text-gray-800 line-clamp-1 flex-1">
+                    📖 {{ item.book?.title || item.title || 'Buku Pustaka' }} × {{ item.qty }}
+                  </span>
+                  <span class="font-bold text-gray-900 shrink-0">
+                    {{ formatRupiah(item.price_at_purchase * item.qty || item.subtotal || 0) }}
+                  </span>
+                </div>
+                <p v-if="order.items?.length > 2" class="text-[10px] text-gray-400 italic pt-1">
+                  + {{ order.items.length - 2 }} judul buku lainnya...
+                </p>
+              </div>
+
+              <!-- Baris Rincian Saldo Hutang -->
+              <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 p-3 bg-[#f8fafc] rounded-2xl border border-gray-100 text-xs">
+                <div>
+                  <span class="text-[10px] text-gray-400 uppercase font-bold block">Total Belanja Awal</span>
+                  <span class="font-bold text-gray-700">{{ formatRupiah(order.total_amount) }}</span>
+                </div>
+                <div>
+                  <span class="text-[10px] text-gray-400 uppercase font-bold block">Sudah Disetor</span>
+                  <span class="font-bold text-emerald-600">{{ formatRupiah(order.paid_amount || 0) }}</span>
+                </div>
+                <div class="col-span-2 sm:col-span-1">
+                  <span class="text-[10px] text-rose-500 uppercase font-bold block">Sisa Hutang Berjalan</span>
+                  <span class="font-black text-rose-600 text-sm">{{ formatRupiah(getRemainingDebt(order)) }}</span>
+                </div>
+              </div>
+
+              <!-- Baris Bawah: Tombol Setor Cicilan -->
+              <div class="pt-1 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs" @click.stop>
+                <div class="text-gray-400 text-[11px] flex items-center gap-1.5">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-[#00a9c3]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span>Transfer nominal bebas lalu upload struk di sini.</span>
+                </div>
+
+                <div class="flex items-center gap-2">
+                  <!-- Tombol Upload Bukti Cicilan -->
+                  <button 
+                    @click="openDebtPaymentDialog(order)"
+                    class="px-4 py-2 rounded-xl bg-[#00a9c3] text-white text-[11px] font-bold uppercase hover:bg-[#475c80] transition shadow-md shadow-[#00a9c3]/20 flex items-center gap-1.5"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                    </svg>
+                    <span>+ Setor Cicilan</span>
+                  </button>
+
+                  <!-- Tombol Rincian Struk -->
+                  <button 
+                    @click="openOrderDetail(order)"
+                    class="px-3.5 py-2 rounded-xl border border-gray-300 text-gray-700 text-[11px] font-bold uppercase hover:border-[#00a9c3] hover:text-[#00a9c3] transition flex items-center gap-1.5 bg-white"
+                  >
+                    <span>Rincian</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- RIWAYAT BUKTI SETORAN CICILAN YANG SUDAH DIKIRIM -->
+          <div v-if="debtPaymentHistory.length > 0" class="mt-8 pt-6 border-t border-gray-100 space-y-4">
+            <h3 class="text-sm font-black text-gray-900 tracking-tight">Riwayat Bukti Setoran Cicilan Anda</h3>
+            <div class="divide-y divide-gray-100 border border-gray-200/80 rounded-2xl overflow-hidden bg-white">
+              <div 
+                v-for="(pay, idx) in debtPaymentHistory" 
+                :key="idx"
+                class="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs"
+              >
+                <div>
+                  <span class="font-bold text-gray-900">{{ pay.order_number }}</span>
+                  <span class="text-gray-400 text-[11px] ml-2">{{ formatDate(pay.date) }}</span>
+                  <p class="text-[11px] text-gray-500 mt-0.5">{{ pay.notes || 'Setoran cicilan tempo' }}</p>
+                </div>
+                <div class="flex items-center gap-3">
+                  <a v-if="pay.proof_url" :href="pay.proof_url" target="_blank" class="text-[#00a9c3] font-bold hover:underline text-[11px]">
+                    Lihat Struk ↗
+                  </a>
+                  <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase bg-amber-50 text-amber-700 border border-amber-200">
+                    {{ pay.status }}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- ============================================== -->
+        <!-- TAB 4: VOUCHER                                 -->
         <!-- ============================================== -->
         <div v-else-if="activeTab === 'voucher'" class="space-y-6">
           <div>
@@ -240,7 +432,7 @@
         </div>
 
         <!-- ============================================== -->
-        <!-- TAB 4: SETTINGS (PROFIL + GANTI PASSWORD LENGKAP) -->
+        <!-- TAB 5: SETTINGS                                -->
         <!-- ============================================== -->
         <div v-else-if="activeTab === 'settings'" class="space-y-10">
           
@@ -284,42 +476,88 @@
           <div class="space-y-4 pt-6 border-t border-gray-200/70">
             <div class="border-b border-gray-100 pb-3">
               <h2 class="text-base font-black text-gray-900 tracking-tight">2. Keamanan & Ganti Password</h2>
-              <p class="text-xs text-gray-400 mt-0.5">Pastikan kata sandi baru Anda minimal 8 karakter demi keamanan akun.</p>
+              <p class="text-xs text-gray-400 mt-0.5">Pastikan kata sandi baru Anda minimal 8 karakter.</p>
             </div>
 
             <form @submit.prevent="handleChangePassword" class="max-w-xl space-y-4 text-xs">
               <div>
                 <label class="block text-gray-700 font-bold mb-1">Password Saat Ini <span class="text-rose-500">*</span></label>
-                <input 
-                  v-model="passwordForm.current_password" 
-                  type="password" 
-                  placeholder="Masukkan password lama Anda" 
-                  required
-                  class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-[#00a9c3] outline-none text-xs transition" 
-                />
+                <div class="relative">
+                  <input 
+                    v-model="passwordForm.current_password" 
+                    :type="showCurrentPassword ? 'text' : 'password'" 
+                    placeholder="Masukkan password lama Anda" 
+                    required 
+                    class="w-full pl-4 pr-11 py-2.5 rounded-xl border border-gray-200 focus:border-[#00a9c3] outline-none text-xs transition" 
+                  />
+                  <button 
+                    type="button" 
+                    @click="showCurrentPassword = !showCurrentPassword"
+                    class="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#00a9c3] transition p-1"
+                  >
+                    <svg v-if="!showCurrentPassword" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    </svg>
+                    <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-[#00a9c3]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18" />
+                    </svg>
+                  </button>
+                </div>
               </div>
 
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label class="block text-gray-700 font-bold mb-1">Password Baru <span class="text-rose-500">*</span></label>
-                  <input 
-                    v-model="passwordForm.password" 
-                    type="password" 
-                    placeholder="Minimal 8 karakter" 
-                    required
-                    minlength="8"
-                    class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-[#00a9c3] outline-none text-xs transition" 
-                  />
+                  <div class="relative">
+                    <input 
+                      v-model="passwordForm.password" 
+                      :type="showNewPassword ? 'text' : 'password'" 
+                      placeholder="Minimal 8 karakter" 
+                      required 
+                      minlength="8" 
+                      class="w-full pl-4 pr-11 py-2.5 rounded-xl border border-gray-200 focus:border-[#00a9c3] outline-none text-xs transition" 
+                    />
+                    <button 
+                      type="button" 
+                      @click="showNewPassword = !showNewPassword"
+                      class="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#00a9c3] transition p-1"
+                    >
+                      <svg v-if="!showNewPassword" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                      </svg>
+                      <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-[#00a9c3]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18" />
+                      </svg>
+                    </button>
+                  </div>
                 </div>
+
                 <div>
-                  <label class="block text-gray-700 font-bold mb-1">Konfirmasi Password Baru <span class="text-rose-500">*</span></label>
-                  <input 
-                    v-model="passwordForm.password_confirmation" 
-                    type="password" 
-                    placeholder="Ulangi password baru" 
-                    required
-                    class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-[#00a9c3] outline-none text-xs transition" 
-                  />
+                  <label class="block text-gray-700 font-bold mb-1">Konfirmasi Password <span class="text-rose-500">*</span></label>
+                  <div class="relative">
+                    <input 
+                      v-model="passwordForm.password_confirmation" 
+                      :type="showConfirmPassword ? 'text' : 'password'" 
+                      placeholder="Ulangi password baru" 
+                      required 
+                      class="w-full pl-4 pr-11 py-2.5 rounded-xl border border-gray-200 focus:border-[#00a9c3] outline-none text-xs transition" 
+                    />
+                    <button 
+                      type="button" 
+                      @click="showConfirmPassword = !showConfirmPassword"
+                      class="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#00a9c3] transition p-1"
+                    >
+                      <svg v-if="!showConfirmPassword" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                      </svg>
+                      <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-[#00a9c3]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18" />
+                      </svg>
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -336,7 +574,6 @@
         </div>
 
       </div>
-
     </div>
 
     <!-- MODAL POPUP: STRUK RINCIAN PESANAN -->
@@ -459,7 +696,100 @@
       </template>
     </el-dialog>
 
-    <!-- DIALOG UPLOAD BUKTI TRANSFER -->
+    <!-- MODAL KHUSUS: UPLOAD BUKTI SETOR CICILAN PIUTANG (TANPA KETIK NOMINAL) -->
+    <el-dialog 
+      v-model="showDebtModal" 
+      title="Setor Cicilan Piutang" 
+      width="90%" 
+      class="max-w-md !rounded-3xl"
+    >
+      <div v-if="orderForDebtPayment" class="space-y-4 text-xs">
+        
+        <!-- Rincian Faktur yang Dicicil -->
+        <div class="p-3.5 bg-gray-50 rounded-2xl border border-gray-100 space-y-1">
+          <div class="flex justify-between">
+            <span class="text-gray-500">Nomor Faktur:</span>
+            <b class="text-gray-900 font-mono">{{ orderForDebtPayment.order_number }}</b>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-gray-500">Sisa Tagihan:</span>
+            <b class="text-rose-600 font-bold text-sm">{{ formatRupiah(getRemainingDebt(orderForDebtPayment)) }}</b>
+          </div>
+        </div>
+
+        <!-- Rekening Resmi ABC Jakarta -->
+        <div class="p-3.5 bg-[#00a9c3]/5 border border-[#00a9c3]/20 rounded-2xl space-y-2">
+          <p class="text-[10px] font-bold text-[#00a9c3] uppercase tracking-wider">Rekening Tujuan Transfer</p>
+          <div class="flex items-center justify-between bg-white p-2.5 rounded-xl border border-gray-200">
+            <div>
+              <p class="font-black text-gray-800 text-xs">Bank Mandiri</p>
+              <p class="font-mono font-bold text-[#00a9c3] text-xs">1240011223345</p>
+              <p class="text-[10px] text-gray-400">a.n Yayasan Advent Jakarta</p>
+            </div>
+            <button 
+              @click="copyBankNumber"
+              type="button" 
+              class="px-2.5 py-1 bg-[#00a9c3] text-white rounded-lg font-bold text-[10px] hover:bg-[#475c80] transition"
+            >
+              {{ copiedBankText }}
+            </button>
+          </div>
+        </div>
+
+        <!-- Upload File Bukti Transfer -->
+        <div>
+          <label class="block text-gray-700 font-bold mb-1.5">
+            Foto Struk / Bukti Transfer: <span class="text-rose-500">*</span>
+          </label>
+          <input 
+            type="file" 
+            accept="image/*" 
+            @change="handleDebtFileChange" 
+            class="w-full text-xs text-gray-500 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-[#00a9c3]/10 file:text-[#00a9c3] cursor-pointer" 
+          />
+        </div>
+
+        <!-- Preview Struk -->
+        <div v-if="debtPreviewImage" class="text-center">
+          <img :src="debtPreviewImage" class="max-h-40 mx-auto rounded-xl border border-gray-200 object-contain" />
+        </div>
+
+        <!-- Catatan Tambahan -->
+        <div>
+          <label class="block text-gray-700 font-bold mb-1">Catatan / Keterangan (Opsional):</label>
+          <input 
+            v-model="debtPaymentNotes" 
+            type="text" 
+            placeholder="Contoh: Setoran cicilan penjualan buku literasi..." 
+            class="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs focus:border-[#00a9c3] outline-none" 
+          />
+        </div>
+
+        <!-- Notifikasi Status Pending -->
+        <div class="p-3 bg-amber-50 rounded-xl border border-amber-200 text-[11px] text-amber-800 flex items-start gap-2">
+          <span>ℹ️</span>
+          <span>Setelah dikirim, status cicilan akan <b>Menunggu Verifikasi Admin</b>. Kasir akan mengecek mutasi dan sisa hutang akan otomatis berkurang.</span>
+        </div>
+
+      </div>
+
+      <template #footer>
+        <div class="flex justify-end gap-2 pt-2">
+          <el-button @click="showDebtModal = false" class="!rounded-xl font-bold">Batal</el-button>
+          <el-button 
+            type="primary" 
+            :loading="uploadingDebtProof" 
+            :disabled="!debtSelectedFile" 
+            class="!bg-[#00a9c3] !border-none !rounded-xl font-bold" 
+            @click="submitDebtPayment"
+          >
+            Kirim Bukti Pembayaran
+          </el-button>
+        </div>
+      </template>
+    </el-dialog>
+
+    <!-- DIALOG UPLOAD BUKTI TRANSFER REGULER (TAB BUYING) -->
     <el-dialog v-model="showUploadDialog" title="Upload Bukti Transfer Bank" width="90%" class="max-w-md !rounded-3xl">
       <div v-if="orderToUpload" class="space-y-4 text-xs">
         <div class="p-3.5 bg-gray-50 rounded-2xl border border-gray-100">
@@ -486,6 +816,7 @@
 </template>
 
 <script setup>
+import { ref, reactive, computed, watch, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 
 definePageMeta({
@@ -505,20 +836,37 @@ const router = useRouter()
 const { authUser, checkProfile } = useAuth()
 const { apiFetch, uploadAttachment, getErrorMessage } = useApi()
 
-// Tabs Navigasi
-const tabs = [
-  { id: 'profile', label: 'Profile', icon: '👤' },
-  { id: 'buying', label: 'Buying', icon: '🛍️' },
-  { id: 'voucher', label: 'Voucher', icon: '🎟️' },
-  { id: 'settings', label: 'Settings', icon: '⚙️' },
-]
+// Cek apakah User adalah Lembaga atau PL (Penginjil Literatur)
+const isLembagaOrPL = computed(() => {
+  const type = authUser.value?.customer?.type?.toLowerCase() || ''
+  return ['penginjil', 'gereja', 'sekolah'].includes(type)
+})
+
+// Tabs Navigasi Dinamis: Tab Piutang otomatis muncul di antara Buying dan Voucher bagi PL / Lembaga
+const availableTabs = computed(() => {
+  const list = [
+    { id: 'profile', label: 'Profile', icon: '👤' },
+    { id: 'buying', label: 'Buying', icon: '🛍️' }
+  ]
+
+  if (isLembagaOrPL.value) {
+    list.push({ id: 'piutang', label: 'Piutang & Cicilan', icon: '💳' })
+  }
+
+  list.push(
+    { id: 'voucher', label: 'Voucher', icon: '🎟️' },
+    { id: 'settings', label: 'Settings', icon: '⚙️' }
+  )
+
+  return list
+})
 
 const activeTab = ref('profile')
 
 const syncTabFromUrl = () => {
   const queryTab = route.query.tab
   if (queryTab && typeof queryTab === 'string') {
-    const found = tabs.find(t => t.id === queryTab.toLowerCase())
+    const found = availableTabs.value.find(t => t.id === queryTab.toLowerCase())
     if (found) activeTab.value = found.id
   }
 }
@@ -543,7 +891,7 @@ const customerTypeLabel = computed(() => {
 })
 
 // ==========================================
-// LOGIKA FETCH PESANAN (BUYING)
+// DATA PESANAN & PIUTANG
 // ==========================================
 const orders = ref([])
 const ordersLoading = ref(false)
@@ -562,12 +910,133 @@ const fetchOrders = async () => {
 }
 
 onMounted(() => {
-  if (activeTab.value === 'buying') fetchOrders()
+  if (activeTab.value === 'buying' || activeTab.value === 'piutang') {
+    fetchOrders()
+  }
 })
 
 watch(activeTab, (tab) => {
-  if (tab === 'buying') fetchOrders()
+  if (tab === 'buying' || tab === 'piutang') {
+    fetchOrders()
+  }
 })
+
+// ==========================================
+// LOGIKA KHUSUS TAB PIUTANG
+// ==========================================
+// Pesanan Tempo yang masih memiliki sisa tagihan (remaining debt > 0)
+const debtOrders = computed(() => {
+  return orders.value.filter(order => {
+    const isCreditOrder = order.payment_method === 'tempo' || order.payment_method === 'kredit' || order.is_tempo
+    const remaining = getRemainingDebt(order)
+    return isCreditOrder && remaining > 0
+  })
+})
+
+const getRemainingDebt = (order) => {
+  if (!order) return 0
+  const total = Number(order.total_amount || 0)
+  const paid = Number(order.paid_amount || 0)
+  return Math.max(0, total - paid)
+}
+
+const totalRemainingDebt = computed(() => {
+  return debtOrders.value.reduce((acc, curr) => acc + getRemainingDebt(curr), 0)
+})
+
+const userCreditLimit = computed(() => {
+  return Number(authUser.value?.credit_limit || authUser.value?.customer?.credit_limit || 7500000)
+})
+
+const availableCreditLimit = computed(() => {
+  return Math.max(0, userCreditLimit.value - totalRemainingDebt.value)
+})
+
+// Modal Setor Cicilan Piutang
+const showDebtModal = ref(false)
+const orderForDebtPayment = ref(null)
+const debtSelectedFile = ref(null)
+const debtPreviewImage = ref(null)
+const debtPaymentNotes = ref('')
+const uploadingDebtProof = ref(false)
+const copiedBankText = ref('Salin No. Rekening')
+
+// Riwayat Setoran Cicilan Lokal / Server
+const debtPaymentHistory = ref([])
+
+const openDebtPaymentDialog = (order) => {
+  orderForDebtPayment.value = order
+  debtSelectedFile.value = null
+  debtPreviewImage.value = null
+  debtPaymentNotes.value = ''
+  copiedBankText.value = 'Salin No. Rekening'
+  showDebtModal.value = true
+}
+
+const handleDebtFileChange = (e) => {
+  const file = e.target.files?.[0]
+  if (file) {
+    debtSelectedFile.value = file
+    debtPreviewImage.value = URL.createObjectURL(file)
+  }
+}
+
+const copyBankNumber = () => {
+  navigator.clipboard.writeText('1240011223345')
+  copiedBankText.value = 'Tersalin! ✅'
+  setTimeout(() => {
+    copiedBankText.value = 'Salin No. Rekening'
+  }, 2000)
+}
+
+// Submit Bukti Cicilan -> Status Masuk Pending Admin
+const submitDebtPayment = async () => {
+  if (!debtSelectedFile.value || !orderForDebtPayment.value) return
+
+  uploadingDebtProof.value = true
+  try {
+    // 1. Upload file struk ke server
+    const attachment = await uploadAttachment(debtSelectedFile.value, {
+      attachmentableType: 'order',
+      attachmentableId: orderForDebtPayment.value.id,
+      type: 'debt_payment_proof'
+    })
+
+    // 2. Simpan pembayaran cicilan via API
+    try {
+      await apiFetch(`/orders/${orderForDebtPayment.value.id}/pay`, {
+        method: 'POST',
+        body: {
+          payment_proof_id: attachment.id,
+          notes: debtPaymentNotes.value
+        }
+      })
+    } catch (e) {
+      // Fallback jika route /pay belum ada di backend
+      await apiFetch(`/orders/${orderForDebtPayment.value.id}`, {
+        method: 'PUT',
+        body: { payment_proof_id: attachment.id }
+      })
+    }
+
+    // Catat ke daftar riwayat lokal
+    debtPaymentHistory.value.unshift({
+      order_number: orderForDebtPayment.value.order_number,
+      date: new Date().toISOString(),
+      proof_url: debtPreviewImage.value,
+      notes: debtPaymentNotes.value,
+      status: 'Menunggu Verifikasi Admin'
+    })
+
+    ElMessage.success('Bukti setoran cicilan berhasil dikirim! Menunggu verifikasi admin.')
+    showDebtModal.value = false
+    await fetchOrders()
+  } catch (err) {
+    ElMessage.error(getErrorMessage(err, 'Gagal mengunggah bukti cicilan.'))
+  } finally {
+    uploadingDebtProof.value = false
+  }
+}
 
 // ==========================================
 // MODAL DETAIL STRUK PESANAN
@@ -627,7 +1096,7 @@ const getShippingBadgeClass = (order) => {
 }
 
 // ==========================================
-// UPLOAD BUKTI TRANSFER
+// UPLOAD BUKTI TRANSFER REGULER (TAB BUYING)
 // ==========================================
 const showUploadDialog = ref(false)
 const orderToUpload = ref(null)
@@ -710,9 +1179,11 @@ const passwordForm = reactive({
   password_confirmation: ''
 })
 const changingPassword = ref(false)
+const showCurrentPassword = ref(false)
+const showNewPassword = ref(false)
+const showConfirmPassword = ref(false)
 
 const handleChangePassword = async () => {
-  // Validasi di sisi frontend
   if (passwordForm.password.length < 8) {
     ElMessage.warning('Password baru minimal 8 karakter.')
     return
@@ -729,7 +1200,6 @@ const handleChangePassword = async () => {
       body: passwordForm
     })
     ElMessage.success('Password berhasil diperbarui!')
-    // Reset form setelah sukses
     passwordForm.current_password = ''
     passwordForm.password = ''
     passwordForm.password_confirmation = ''
