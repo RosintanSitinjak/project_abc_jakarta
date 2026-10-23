@@ -7,6 +7,7 @@ use App\Models\Customer;
 use App\Enums\Role;
 use App\Http\Requests\LoginRequest;
 use App\Mail\WelcomeRegistrationMail;
+use App\Mail\ResetPasswordMail;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -14,6 +15,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
@@ -84,7 +86,6 @@ class AuthController extends Controller
             'type'     => 'required|in:jemaat,gereja,sekolah,penginjil',
         ]);
 
-        // Simpan data ke Database PostgreSQL
         $createdData = DB::transaction(function () use ($request) {
             // 1. Buat Akun User
             $user = User::create([
@@ -121,8 +122,7 @@ class AuthController extends Controller
             ];
         });
 
-        // 4. KIRIM EMAIL RESMI KE ALAMAT EMAIL PENDAFTAR
-        // Menggunakan try-catch agar jika koneksi SMTP internet terganggu, registrasi akun tetap berhasil
+        // 4. Kirim Email Resmi ke Alamat Email Pendaftar
         try {
             Mail::to($createdData['user']->email)->send(
                 new WelcomeRegistrationMail($createdData['user'], $createdData['customer'])
@@ -136,6 +136,67 @@ class AuthController extends Controller
                 ? 'Pendaftaran berhasil. Akun Anda sedang diverifikasi Admin. Rincian pendaftaran telah dikirim ke email Anda.' 
                 : 'Pendaftaran berhasil! Konfirmasi akun telah dikirim ke email Anda. Silakan login.'
         ], 201);
+    }
+
+    /**
+     * REQUEST LUPA PASSWORD (Kirim Link Reset via Email)
+     */
+    public function forgotPassword(Request $request): JsonResponse
+    {
+        $request->validate([
+            'email' => 'required|email|exists:users,email'
+        ], [
+            'email.exists' => 'Alamat email tidak terdaftar dalam sistem ABC Jakarta.'
+        ]);
+
+        $user = User::where('email', $request->email)->first();
+        $token = Str::random(60);
+
+        // Simpan / update token di tabel password_reset_tokens
+        DB::table('password_reset_tokens')->updateOrInsert(
+            ['email' => $user->email],
+            [
+                'token'      => Hash::make($token), 
+                'created_at' => now()
+            ]
+        );
+
+        // Kirim email reset password
+        try {
+            Mail::to($user->email)->send(new ResetPasswordMail($user, $token));
+        } catch (\Throwable $e) {
+            Log::error('Gagal mengirim email reset password: ' . $e->getMessage());
+            return response()->json(['message' => 'Gagal mengirim email reset password. Periksa koneksi internet.'], 500);
+        }
+
+        return response()->json(['message' => 'Tautan atur ulang kata sandi telah dikirim ke email Anda.']);
+    }
+
+    /**
+     * EKSEKUSI RESET PASSWORD DENGAN TOKEN
+     */
+    public function resetPassword(Request $request): JsonResponse
+    {
+        $request->validate([
+            'email'    => 'required|email|exists:users,email',
+            'token'    => 'required|string',
+            'password' => 'required|string|min:8|confirmed',
+        ]);
+
+        $record = DB::table('password_reset_tokens')->where('email', $request->email)->first();
+
+        if (!$record || !Hash::check($request->token, $record->token)) {
+            return response()->json(['message' => 'Tautan reset password tidak valid atau telah kedaluwarsa.'], 422);
+        }
+
+        // Update password baru di tabel users
+        $user = User::where('email', $request->email)->first();
+        $user->update(['password' => Hash::make($request->password)]);
+
+        // Hapus token yang sudah dipakai
+        DB::table('password_reset_tokens')->where('email', $request->email)->delete();
+
+        return response()->json(['message' => 'Kata sandi berhasil diperbarui! Silakan masuk dengan kata sandi baru Anda.']);
     }
 
     /**
