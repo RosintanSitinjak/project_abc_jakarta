@@ -154,10 +154,21 @@ class OrderController extends Controller
                 ];
             }
 
-            // 6. Tentukan Status Awal Transaksi & Validasi Aturan Bisnis
+            // 6. NORMALISASI METODE BAYAR AGAR LOLOS CHECK CONSTRAINT DATABASE POSTGRESQL
+            $rawPaymentMethod = strtolower((string) $request->payment_method);
+
+            if (in_array($rawPaymentMethod, ['pending_calculation', 'pending', '', 'null', 'none'])) {
+                // Jika user memilih opsi Jalur 3 (tunggu hitung ongkir), default metode pembayaran adalah transfer
+                $paymentMethod = 'transfer';
+            } elseif (in_array($rawPaymentMethod, ['credit', 'kredit'])) {
+                $paymentMethod = 'kredit';
+            } else {
+                $paymentMethod = $rawPaymentMethod;
+            }
+
+            // 7. Tentukan Status Awal Transaksi & Validasi Aturan Bisnis
             $isWaitingShippingFee = ($deliveryMethod === 'delivery' && $shippingPaymentType === 'prepaid' && $shippingFee <= 0);
             $totalAmount = $bookSubtotal + $shippingFee;
-            $paymentMethod = strtolower($request->payment_method) === 'credit' ? 'kredit' : strtolower($request->payment_method);
 
             // ATURAN 1: Jemaat dilarang memilih opsi kredit
             if ($customer->type === 'jemaat' && $paymentMethod === 'kredit') {
@@ -182,7 +193,6 @@ class OrderController extends Controller
             }
 
             // ATURAN 2: Validasi Limit Kredit PL (Maksimal Rp 5.000.000)
-            // HANYA dicek jika metode pembayaran yang dipilih adalah 'KREDIT'
             if ($customer->type === 'penginjil' && $paymentMethod === 'kredit') {
                 $projectedDebt = (float)$customer->current_debt + $remaining;
                 if ($projectedDebt > 5000000) {
@@ -190,7 +200,7 @@ class OrderController extends Controller
                 }
             }
 
-            // 7. Buat Record Pesanan
+            // 8. Buat Record Pesanan
             $order = Order::create([
                 'customer_id'           => $customer->id,
                 'order_number'          => 'INV-' . date('Ymd') . '-' . strtoupper(Str::random(4)),
@@ -215,7 +225,7 @@ class OrderController extends Controller
                 $this->setSingleAttachment($order, 'thumbnail', $request->payment_proof_id, 'payment_proof');
             }
 
-            // 8. Simpan Items & Kurangi Stok Buku (ROP)
+            // 9. Simpan Items & Kurangi Stok Buku (ROP)
             foreach ($itemsData as $data) {
                 $order->items()->create([
                     'book_id'           => $data['book']->id,
@@ -225,7 +235,7 @@ class OrderController extends Controller
                 $data['book']->decrement('stock', $data['qty']);
             }
 
-            // 9. Akumulasi Saldo Piutang Customer HANYA untuk metode KREDIT
+            // 10. Akumulasi Saldo Piutang Customer HANYA untuk metode KREDIT
             if ($paymentMethod === 'kredit' && $remaining > 0 && !$isWaitingShippingFee) {
                 $customer->increment('current_debt', $remaining);
             }
@@ -297,7 +307,6 @@ class OrderController extends Controller
             if ($request->filled('payment_status')) {
                 $newStatus = $request->payment_status;
                 if ($oldPaymentStatus !== 'paid' && $newStatus === 'paid') {
-                    // Potong current_debt hanya jika transaksi ini adalah transaksi kredit
                     if ($customer && $order->remaining_amount > 0 && $order->payment_method === 'kredit') {
                         $customer->decrement('current_debt', $order->remaining_amount);
                     }
@@ -385,7 +394,6 @@ class OrderController extends Controller
                 }
             }
 
-            // Kurangi hutang hanya jika order ini berstatus kredit dan belum bayar
             if ($order->remaining_amount > 0 && $order->payment_method === 'kredit' && $order->payment_status !== 'waiting_shipping_fee') {
                 $customer = Customer::withTrashed()->find($order->customer_id);
                 if ($customer) {

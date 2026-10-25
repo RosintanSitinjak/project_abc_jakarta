@@ -8,18 +8,21 @@
           <p class="text-sm text-slate-500">Kelola profil, riwayat transaksi, dan limit kredit pelanggan.</p>
         </div>
         <div class="flex items-center gap-3">
+          <!-- DROPDOWN DENGAN EVENT CLEAR & RESET OTOMATIS -->
           <el-select 
             v-model="filterType" 
             placeholder="Semua Tipe" 
             clearable 
-            class="w-32" 
+            class="w-36" 
             @change="loadCustomers"
+            @clear="handleClearFilter"
           >
             <el-option label="Jemaat" value="jemaat" />
             <el-option label="Gereja" value="gereja" />
             <el-option label="PL (Penginjil)" value="penginjil" />
             <el-option label="Sekolah" value="sekolah" />
           </el-select>
+
           <el-input 
             v-model="searchQuery" 
             placeholder="Cari nama/kontak..." 
@@ -30,6 +33,7 @@
           >
             <template #prefix><Icon icon="solar:magnifer-linear" /></template>
           </el-input>
+
           <el-button type="primary" color="#00A9C3" @click="openCreate">+ Tambah</el-button>
         </div>
       </div>
@@ -242,7 +246,7 @@
       </template>
     </el-dialog>
 
-    <!-- DIALOG: KARTU PIUTANG & BUKTI CICILAN (SUDAH DIUPGRADE BEBAS GAMBAR FAILED) -->
+    <!-- DIALOG: KARTU PIUTANG & BUKTI CICILAN -->
     <el-dialog 
       v-model="isHistoryOpen" 
       :title="'Kartu Piutang / Riwayat Cicilan: ' + selectedCustomer?.name" 
@@ -299,7 +303,7 @@
             </template>
           </el-table-column>
 
-          <!-- KOLOM BUKTI STRUK DENGAN SLOT ERROR CERDAS -->
+          <!-- KOLOM BUKTI STRUK -->
           <el-table-column label="Bukti Struk" align="center" min-width="120">
             <template #default="{ row }">
               <div v-if="row.proof_url" class="inline-flex items-center justify-center">
@@ -310,7 +314,6 @@
                   class="w-8 h-8 rounded-lg shadow-xs cursor-pointer border border-slate-200 hover:scale-105 transition-transform" 
                   fit="cover" 
                 >
-                  <!-- JIKA FILE GAMBAR RUSAK / TIDAK ADA DI DISK -->
                   <template #error>
                     <div class="w-8 h-8 bg-slate-100 rounded-lg flex items-center justify-center text-slate-400" title="Struk tidak dapat dimuat">
                       <Icon icon="solar:gallery-remove-bold" class="text-base text-slate-400" />
@@ -325,7 +328,6 @@
           </el-table-column>
         </el-table>
 
-        <!-- KETERANGAN JIKA BELUM PERNAH NYICIL -->
         <div v-if="paymentHistoryData.length === 0" class="text-center py-6 text-slate-400 text-xs">
           Belum ada catatan pembayaran cicilan untuk pelanggan ini.
         </div>
@@ -341,7 +343,7 @@
 <script lang="ts" setup>
 import { Icon } from "@iconify/vue";
 import { ElMessage, ElMessageBox, ElNotification } from 'element-plus';
-import { onMounted, reactive, ref } from 'vue';
+import { onMounted, reactive, ref, watch } from 'vue';
 import AdminShell from '~/components/Admin/Shell.vue';
 import { useApi } from '~/composables/useApi';
 
@@ -368,7 +370,6 @@ const selectedCustomer = ref<any>(null);
 const formatNumber = (val: number) => new Intl.NumberFormat('id-ID').format(val || 0);
 const formatDateTime = (d: string) => new Date(d).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
 
-// FORMAT LABEL METODE PEMBAYARAN PADA KARTU PIUTANG
 const formatPaymentMethodLabel = (method: string) => {
   if (!method) return 'Tunai';
   const m = method.toLowerCase();
@@ -388,7 +389,6 @@ const getPaymentMethodTag = (method: string) => {
   return 'info';
 };
 
-// WHATSAPP GATEWAY
 const sendWhatsApp = (customer: any) => {
   if (!customer.phone) {
     return ElMessage.warning('Nomor WhatsApp pelanggan tidak tersedia.');
@@ -423,14 +423,33 @@ const sendWhatsApp = (customer: any) => {
   window.open(waUrl, '_blank');
 };
 
+// LOAD CUSTOMERS DENGAN URLSearchParams BERSIH (MENCEGAH ERROR type=null)
 const loadCustomers = async () => {
   loading.value = true; 
   try { 
-    const res = await apiFetch(`/customers?search=${encodeURIComponent(searchQuery.value)}&type=${filterType.value}`); 
+    const params = new URLSearchParams();
+    
+    if (searchQuery.value && searchQuery.value.trim()) {
+      params.append('search', searchQuery.value.trim());
+    }
+    
+    // Hanya append 'type' jika nilainya benar-benar ada (bukan string 'null', 'undefined', atau kosong)
+    if (filterType.value && filterType.value !== 'all' && filterType.value !== 'null' && filterType.value !== 'undefined') {
+      params.append('type', filterType.value);
+    }
+
+    const queryStr = params.toString() ? `?${params.toString()}` : '';
+    const res = await apiFetch(`/customers${queryStr}`); 
     customers.value = unwrap(res); 
   } finally { 
     loading.value = false; 
   }
+};
+
+// HANDLER KETIKA DROPDOWN DI-CLEAR
+const handleClearFilter = () => {
+  filterType.value = '';
+  loadCustomers();
 };
 
 const handleTypeChange = (newType: string) => {
@@ -532,6 +551,12 @@ const confirmDelete = async (row: any) => {
     }
   }
 };
+
+// AUTO-RELOAD KETIKA FILTER DROPDOWN ATAU SEARCH BERUBAH
+watch(filterType, () => loadCustomers());
+watch(searchQuery, (newVal) => {
+  if (!newVal || newVal.trim() === '') loadCustomers();
+});
 
 onMounted(loadCustomers);
 </script>

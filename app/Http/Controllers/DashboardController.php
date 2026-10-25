@@ -17,39 +17,47 @@ class DashboardController extends Controller
         try {
             $now = Carbon::now();
 
-            // 1. Hitung Total Piutang & Realisasi Pemasukan Kas
-            $totalPiutang = (int) Order::sum('remaining_amount');
+            // 1. HITUNG TOTAL PIUTANG RESMI (Hanya Pesanan Kredit Mitra yang Belum Lunas)
+            // Ini membuat angka Total Piutang di Dashboard SINKRON 100% dengan Menu Buku Piutang!
+            $totalPiutang = (int) Order::whereIn('payment_method', ['kredit', 'credit'])
+                ->where('payment_status', '!=', 'cancelled')
+                ->sum('remaining_amount');
+
+            // Realisasi Kas Masuk Riil dari Seluruh Pembayaran yang Sudah Terjadi
             $totalIncome = (int) Order::select(DB::raw('SUM(total_amount - remaining_amount) as income'))->value('income');
 
-            // 2. LOGIKA AGING PIUTANG (Analisis Kolektibilitas ABC Jakarta)
-            // Piutang Macet: Sisa tagihan berumur lebih dari 30 hari
-            $piutangMacet = (int) Order::where('remaining_amount', '>', 0)
+            // 2. LOGIKA AGING PIUTANG KHUSUS KREDIT MITRA (Analisis Kolektibilitas ABC Jakarta)
+            // Piutang Macet: Sisa tagihan kredit yang berumur lebih dari 30 hari
+            $piutangMacet = (int) Order::whereIn('payment_method', ['kredit', 'credit'])
+                ->where('remaining_amount', '>', 0)
+                ->where('payment_status', '!=', 'cancelled')
                 ->where('created_at', '<=', Carbon::now()->subDays(30))
                 ->sum('remaining_amount');
 
-            // Mendekati Jatuh Tempo: Sisa tagihan berumur antara 14 s/d 30 hari
-            $piutangTempo = (int) Order::where('remaining_amount', '>', 0)
+            // Mendekati Jatuh Tempo: Sisa tagihan kredit berumur antara 14 s/d 30 hari
+            $piutangTempo = (int) Order::whereIn('payment_method', ['kredit', 'credit'])
+                ->where('remaining_amount', '>', 0)
+                ->where('payment_status', '!=', 'cancelled')
                 ->where('created_at', '>', Carbon::now()->subDays(30))
                 ->where('created_at', '<=', Carbon::now()->subDays(14))
                 ->sum('remaining_amount');
 
-            // 3. STATISTIK PENJUALAN BULANAN (Dihitung Dinamis dari Database PostgreSQL)
+            // 3. STATISTIK PENJUALAN BULANAN (Dihitung Dinamis per Bulan di Tahun Berjalan)
             $currentYear = $now->year;
             $currentMonth = $now->month;
             $monthNames = [1 => 'Jan', 2 => 'Feb', 3 => 'Mar', 4 => 'Apr', 5 => 'Mei', 6 => 'Jun', 7 => 'Jul', 8 => 'Agu', 9 => 'Sep', 10 => 'Okt', 11 => 'Nov', 12 => 'Des'];
 
-            // Query omzet penjualan per bulan di tahun berjalan
             $salesPerMonth = Order::select(
                 DB::raw("CAST(EXTRACT(MONTH FROM created_at) AS INTEGER) as month"),
                 DB::raw("SUM(total_amount) as total")
             )
             ->whereYear('created_at', $currentYear)
+            ->where('payment_status', '!=', 'cancelled')
             ->groupBy(DB::raw("EXTRACT(MONTH FROM created_at)"))
             ->pluck('total', 'month')
             ->toArray();
 
             $monthlySales = [];
-            // Menampilkan riwayat bulan berjalan (misal: Jan s/d September)
             for ($m = 1; $m <= $currentMonth; $m++) {
                 $monthlySales[] = [
                     'label' => $monthNames[$m],
@@ -69,11 +77,10 @@ class DashboardController extends Controller
                     'categories'    => Category::count(),
                     'customers'     => Customer::count(),
                     'books'         => Book::count(),
-                    'new_orders'    => Order::where('remaining_amount', '>', 0)->count(),
+                    'new_orders'    => Order::where('payment_status', 'unpaid')->count(),
                     'low_stock'     => Book::whereColumn('stock', '<=', 'rop_point')->count(),
                     'total_piutang' => $totalPiutang,
                     'total_income'  => $totalIncome,
-                    // Data Analisis Kolektibilitas
                     'aging_macet'   => $piutangMacet,
                     'aging_tempo'   => $piutangTempo,
                 ],

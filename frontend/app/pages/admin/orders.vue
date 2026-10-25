@@ -161,7 +161,8 @@
               type="warning" 
               effect="dark" 
               size="small"
-              class="font-black animate-pulse"
+              class="font-black animate-pulse cursor-pointer"
+              @click="openViewDetail(row)"
             >
               INPUT ONGKIR
             </el-tag>
@@ -201,7 +202,7 @@
               PIUTANG TEMPO
             </el-tag>
 
-            <!-- 5. Belum bayar biasa (Transfer/Cash belum lunas) -->
+            <!-- 5. Belum bayar biasa (Transfer/Cash belum lunas & belum upload bukti) -->
             <el-tag 
               v-else-if="row.payment_status === 'unpaid'" 
               type="danger" 
@@ -320,7 +321,7 @@
             :key="order.id" 
             class="p-4 bg-slate-50 border border-slate-200 rounded-2xl flex flex-col md:flex-row gap-4 items-start md:items-center justify-between"
           >
-            <!-- Kolom 1: Struk Gambar ATAU Badge Kredit (Mencegah Placeholder FAILED) -->
+            <!-- Kolom 1: Struk Gambar ATAU Badge Kredit -->
             <div v-if="order.payment_method === 'kredit'" class="w-full md:w-36 h-28 bg-blue-50/80 border border-blue-200 rounded-xl shrink-0 flex flex-col items-center justify-center p-2 text-center text-blue-900">
               <Icon icon="solar:card-2-bold" class="text-3xl text-blue-600 mb-1" />
               <span class="text-[10px] font-black uppercase tracking-wide">Fasilitas Kredit</span>
@@ -335,7 +336,14 @@
                 fit="contain" 
                 class="w-full h-full cursor-pointer hover:scale-105 transition-transform" 
                 :preview-src-list="[order.payment_proof]" 
-              />
+              >
+                <template #error>
+                  <div class="w-full h-full flex flex-col items-center justify-center bg-slate-50 text-slate-400 p-1 text-center">
+                    <Icon icon="solar:gallery-remove-bold" class="text-xl text-slate-400 mb-0.5" />
+                    <span class="text-[9px]">Struk Belum Siap</span>
+                  </div>
+                </template>
+              </el-image>
               <div v-else class="text-[10px] text-slate-400 text-center p-2">
                 <Icon icon="solar:gallery-remove-linear" class="text-2xl mx-auto mb-1 opacity-50" />
                 Belum ada struk
@@ -375,7 +383,7 @@
                   Rincian
                 </el-button>
 
-                <!-- AKSI KREDIT: SETUJUI KREDIT (Status bayar tetap Belum Lunas/Piutang) -->
+                <!-- AKSI KREDIT: SETUJUI KREDIT -->
                 <el-button 
                   v-if="order.payment_method === 'kredit'"
                   type="primary" 
@@ -577,7 +585,7 @@
           v-if="selectedOrder.payment_status === 'waiting_shipping_fee'" 
           title="PESANAN MENUNGGU PENETAPAN ONGKIR" 
           type="warning" 
-          description="Pelanggan memilih bayar ongkir bersama tagihan. Masukkan biaya ongkir riil di bawah ini, lalu klik 'SIMPAN PERUBAHAN & TERBITKAN TAGIHAN' agar status berubah ke siap dibayar." 
+          description="Pelanggan memilih bayar ongkir bersama tagihan. Masukkan biaya ongkir riil di bawah ini, lalu klik 'SIMPAN PERUBAHAN & TERBITKAN TAGIHAN' agar status berubah ke siap dibayar dan diverifikasi." 
           show-icon 
           :closable="false"
         />
@@ -684,16 +692,23 @@
               </p>
             </div>
 
-            <!-- JIKA TRANSFER / CASH: GAMBAR STRUK -->
+            <!-- JIKA TRANSFER / CASH: GAMBAR STRUK DENGAN SLOT ERROR CERDAS -->
             <template v-else>
               <el-image 
                 v-if="selectedOrder.payment_proof" 
                 :src="selectedOrder.payment_proof" 
-                class="h-28 rounded border bg-white w-full" 
+                class="h-28 rounded-xl border border-slate-200 bg-white w-full" 
                 fit="contain" 
                 :preview-src-list="[selectedOrder.payment_proof]" 
-              />
-              <div v-else class="h-28 rounded border border-dashed flex items-center justify-center text-slate-400 bg-white text-xs">
+              >
+                <template #error>
+                  <div class="h-full w-full flex flex-col items-center justify-center bg-slate-50 text-slate-400 p-2 text-center">
+                    <Icon icon="solar:gallery-remove-bold" class="text-2xl text-slate-400 mb-1" />
+                    <span class="text-[10px]">Struk belum dapat dimuat (Jalankan php artisan storage:link)</span>
+                  </div>
+                </template>
+              </el-image>
+              <div v-else class="h-28 rounded-xl border border-dashed flex items-center justify-center text-slate-400 bg-white text-xs">
                 Belum ada bukti struk terlampir
               </div>
               <el-upload action="#" :auto-upload="false" :show-file-list="false" :on-change="handleUploadProof">
@@ -736,7 +751,7 @@
               :disabled="selectedOrder.delivery_method === 'pickup' || selectedOrder.shipping_payment_type === 'cod'"
             />
             <span class="text-[10px] text-slate-400">
-              {{ selectedOrder.delivery_method === 'pickup' ? '* Bebas Ongkir (Ambil Sendiri di Kantor)' : (selectedOrder.shipping_payment_type === 'cod' ? '* Ongkir dibayar di tempat langsung ke kurir' : '* Memasukkan ongkir otomatis menerbitkan tagihan ke user') }}
+              {{ selectedOrder.delivery_method === 'pickup' ? '* Bebas Ongkir (Ambil Sendiri di Kantor)' : (selectedOrder.shipping_payment_type === 'cod' ? '* Ongkir dibayar di tempat langsung ke kurir' : '* Memasukkan ongkir otomatis menerbitkan tagihan siap bayar') }}
             </span>
           </el-form-item>
 
@@ -1090,8 +1105,6 @@ const quickApproveOrder = async (order: any) => {
     await apiFetch(`/orders/${order.id}`, {
       method: 'PUT',
       body: {
-        // Jika kredit: payment_status tetap 'unpaid' (piutang aktif)
-        // Jika transfer/cash: payment_status diubah jadi 'paid'
         payment_status: isCredit ? 'unpaid' : 'paid',
         shipping_status: order.shipping_status === 'pending' ? 'processing' : order.shipping_status
       }
@@ -1178,14 +1191,22 @@ const handleUploadProof = async (file: any) => {
   }
 };
 
+// SIMPAN PERUBAHAN & TERBITKAN TAGIHAN (DENGAN OTOMATISASI STATUS SIAP BAYAR)
 const confirmUpdateStatus = async () => {
   loadingUpdate.value = true;
   try {
+    // OTOMATIS: Jika sebelumnya berstatus 'waiting_shipping_fee' dan admin mengisi ongkir atau metode pickup,
+    // ubah statusnya menjadi 'unpaid' (Belum Lunas / Tagihan Terbit) agar langsung siap diverifikasi.
+    let targetPaymentStatus = selectedOrder.value.payment_status;
+    if (targetPaymentStatus === 'waiting_shipping_fee' && (Number(shippingFeeInput.value) > 0 || selectedOrder.value.delivery_method === 'pickup')) {
+      targetPaymentStatus = 'unpaid';
+    }
+
     await apiFetch(`/orders/${selectedOrder.value.id}`, { 
       method: 'PUT', 
       body: { 
         shipping_fee: shippingFeeInput.value,
-        payment_status: selectedOrder.value.payment_status,
+        payment_status: targetPaymentStatus,
         shipping_status: selectedOrder.value.shipping_status,
         courier_name: selectedOrder.value.courier_name,
         tracking_number: selectedOrder.value.tracking_number,
@@ -1194,9 +1215,10 @@ const confirmUpdateStatus = async () => {
         payment_proof_id: paymentProofId.value || selectedOrder.value.payment_proof_id 
       } 
     });
-    ElMessage.success('Perubahan pesanan dan biaya ongkir berhasil disimpan!'); 
+
+    ElMessage.success('Biaya ongkir disimpan & tagihan berhasil diterbitkan!'); 
     isDetailOpen.value = false; 
-    loadData();
+    await loadData();
   } catch (e: any) { 
     ElMessage.error(e.data?.message || 'Gagal memperbarui status!'); 
   } finally { 

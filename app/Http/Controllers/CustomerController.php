@@ -14,12 +14,28 @@ use Illuminate\Support\Str;
 
 class CustomerController extends Controller
 {
+    /**
+     * TAMPILKAN DAFTAR PELANGGAN DENGAN FILTER AMAN
+     */
     public function index(Request $request): JsonResponse
     {
         $query = Customer::query();
-        if ($request->filled('search')) $query->where('name', 'ILIKE', "%{$request->search}%");
-        if ($request->filled('type')) $query->where('type', $request->type);
-        if ($request->filled('status')) $query->where('status', $request->status);
+
+        // 1. Filter Pencarian Nama
+        if ($request->filled('search')) {
+            $query->where('name', 'ILIKE', "%{$request->search}%");
+        }
+
+        // 2. Filter Kategori (Proteksi: Abaikan jika nilainya 'null', 'undefined', 'all', atau string kosong)
+        if ($request->filled('type') && !in_array($request->type, ['null', 'undefined', 'all', ''])) {
+            $query->where('type', $request->type);
+        }
+
+        // 3. Filter Status
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
         return response()->json($query->latest()->get());
     }
 

@@ -25,6 +25,7 @@
             placeholder="Semua Tipe" 
             clearable 
             @change="loadUsers" 
+            @clear="filterType = ''; loadUsers()"
             class="w-36"
           >
             <el-option label="Jemaat" value="jemaat" />
@@ -41,7 +42,7 @@
       <div class="overflow-x-auto">
         <el-table :data="users" v-loading="loading" stripe border class="w-full rounded-xl overflow-hidden text-xs">
           <!-- NAMA & HAK AKSES -->
-          <el-table-column prop="name" label="Nama & Hak Akses" min-width="180">
+          <el-table-column prop="name" label="Nama & Hak Akses" min-width="190">
              <template #default="{ row }">
                 <div class="flex flex-col">
                   <span :class="{'line-through text-slate-400': row.customer?.status === 'suspended'}" class="font-bold text-[#1B293C] text-xs">
@@ -56,10 +57,10 @@
              </template>
           </el-table-column>
 
-          <!-- EMAIL LOGIN -->
-          <el-table-column prop="email" label="Email Login" min-width="200">
+          <!-- EMAIL LOGIN (SUDAH DIPERLEBAR & ANTI-PATAH BARIS) -->
+          <el-table-column prop="email" label="Email Login" min-width="245">
             <template #default="{ row }">
-              <span class="font-mono text-slate-700">{{ row.email }}</span>
+              <span class="font-mono text-slate-700 whitespace-nowrap text-xs select-all">{{ row.email }}</span>
             </template>
           </el-table-column>
           
@@ -95,7 +96,7 @@
                   </el-button>
                 </el-tooltip>
 
-                <!-- 2. FITUR BARU: KIRIM LINK RESET PASSWORD VIA EMAIL -->
+                <!-- 2. KIRIM LINK RESET PASSWORD VIA EMAIL -->
                 <el-tooltip v-if="row.email" content="Kirim Link Reset Password ke Email" placement="top">
                   <el-button 
                     circle 
@@ -380,7 +381,7 @@ const openRejectModal = async (id: string) => {
   }
 };
 
-// TOGGLE SUSPEND / AKTIFKAN AKUN (KINI SUDAH TERHUBUNG KE BACKEND)
+// TOGGLE SUSPEND / AKTIFKAN AKUN
 const handleToggleStatus = async (id: string) => { 
   try {
     const res: any = await apiFetch(`/customers/${id}/toggle-status`, { method: 'PATCH' }); 

@@ -1,6 +1,6 @@
 <template>
   <AdminShell>
-    <!-- 1. BARIS KOTAK STATISTIK (Ukuran Responsif & Anti-Truncate) -->
+    <!-- 1. BARIS KOTAK STATISTIK -->
     <section class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5 mb-6">
       <div 
         v-for="stat in statCards" 
@@ -14,11 +14,9 @@
         </div>
         
         <div class="flex-1 min-w-0">
-          <!-- SESUDAH (Hapus tracking-wider dan truncate, gunakan tracking-tight) -->
-        <p class="text-[10px] font-black uppercase tracking-tight text-slate-400 whitespace-nowrap">
-          {{ stat.label }}
-        </p>
-          <!-- Angka tidak dipotong elipsis agar nominal jutaan terbaca penuh -->
+          <p class="text-[10px] font-black uppercase tracking-tight text-slate-400 whitespace-nowrap">
+            {{ stat.label }}
+          </p>
           <p class="text-xs sm:text-[13px] font-black text-[#1B293C] tracking-tight whitespace-nowrap">
             <span v-if="loading" class="inline-block h-4 w-12 animate-pulse rounded bg-slate-100" />
             <span v-else>{{ stat.value }}</span>
@@ -120,7 +118,7 @@
         </section>
       </div>
 
-      <!-- KANAN: AKTIVITAS TERAKHIR -->
+      <!-- KANAN: AKTIVITAS TERAKHIR DENGAN LABEL STATUS CERDAS -->
       <section class="glass-panel p-6 bg-white border border-slate-200 h-full flex flex-col">
         <div class="flex items-center justify-between mb-8">
           <h2 class="text-lg font-black text-[#1B293C]">Aktivitas Terakhir</h2>
@@ -141,9 +139,10 @@
               <p class="text-[9px] text-slate-400 font-bold uppercase tracking-tighter">{{ order.order_number }}</p>
             </div>
             <div class="text-right flex-shrink-0">
-              <p class="text-[10px] font-black">Rp{{ formatPrice(order.total_amount) }}</p>
-              <p class="text-[8px] font-black uppercase" :class="order.payment_status === 'paid' ? 'text-green-500' : 'text-red-400'">
-                {{ order.payment_status === 'paid' ? 'LUNAS' : 'PIUTANG' }}
+              <p class="text-[10px] font-black">Rp {{ formatPrice(order.total_amount) }}</p>
+              <!-- STATUS CERDAS: MEMISAHKAN LUNAS, PIUTANG KREDIT, DAN BELUM LUNAS JEMAAT -->
+              <p class="text-[8px] font-black uppercase" :class="getOrderStatusBadge(order).color">
+                {{ getOrderStatusBadge(order).label }}
               </p>
             </div>
           </div>
@@ -188,6 +187,20 @@ const recentOrders = ref<any[]>([]);
 const monthlySales = ref<any[]>([]);
 
 const formatPrice = (n: number) => new Intl.NumberFormat('id-ID').format(n || 0);
+
+// HELPER STATUS TRANSAKSI AKTIVITAS TERAKHIR
+const getOrderStatusBadge = (order: any) => {
+  if (order.payment_status === 'paid') {
+    return { label: 'LUNAS', color: 'text-emerald-500' };
+  }
+  if (order.payment_status === 'waiting_shipping_fee') {
+    return { label: 'INPUT ONGKIR', color: 'text-amber-500' };
+  }
+  if (order.payment_method === 'kredit' || order.payment_method === 'credit') {
+    return { label: 'PIUTANG', color: 'text-red-500' };
+  }
+  return { label: 'BELUM LUNAS', color: 'text-amber-600' };
+};
 
 const statCards = computed(() => [
   { key: "cat", label: "Kategori", value: stats.value.categories, icon: "solar:folder-2-bold", color: "#00A9C3", to: "/admin/categories" },
