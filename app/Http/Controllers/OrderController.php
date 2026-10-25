@@ -12,6 +12,8 @@ use Illuminate\Http\JsonResponse;
 use Barryvdh\DomPDF\Facade\Pdf;
 use App\Http\Controllers\Concerns\ManagesAttachments;
 use Carbon\Carbon;
+use App\Enums\Role;
+use Illuminate\Support\Facades\Auth;
 
 class OrderController extends Controller
 {
@@ -20,10 +22,21 @@ class OrderController extends Controller
     /**
      * TAMPILKAN DAFTAR PESANAN DENGAN FILTER FLEKSIBEL
      */
+   /**
+     * TAMPILKAN DAFTAR PESANAN DENGAN FILTER FLEKSIBEL
+     */
     public function index(Request $request): JsonResponse
     {
         $query = Order::with(['customer' => fn($q) => $q->withTrashed(), 'items.book', 'thumbnail']);
         
+        // AMBIL DATA USER YANG SEDANG LOGIN
+        $user = $request->user() ?? Auth::user();
+
+        if ($user && $user->customer && ($user->role === Role::Pelanggan || !in_array($user->role, [1, 2, 'admin', 'pimpinan']))) {
+            $query->where('customer_id', $user->customer->id);
+        }
+
+
         // Filter Rentang Tanggal
         if ($request->filled('start_date') && $request->filled('end_date')) {
             $query->whereBetween('created_at', [$request->start_date . ' 00:00:00', $request->end_date . ' 23:59:59']);
