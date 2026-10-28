@@ -45,7 +45,7 @@
       <!-- 2. KONTEN TAB UTAMA -->
       <div class="bg-white rounded-3xl p-6 md:p-8 border border-gray-100 shadow-sm">
         
-        <!-- Tab Bar Navigasi (Dinamis: Piutang otomatis muncul untuk PL / Gereja / Sekolah) -->
+        <!-- Tab Bar Navigasi (Otomatis menampilkan tab Piutang untuk PL, Gereja, Sekolah) -->
         <div class="flex items-center gap-2 border-b border-gray-100 pb-4 mb-8 overflow-x-auto">
           <button 
             v-for="tab in availableTabs" 
@@ -60,7 +60,6 @@
           >
             <span>{{ tab.icon }}</span>
             <span>{{ tab.label }}</span>
-            <!-- Badge Tempo Khusus Tab Piutang -->
             <span v-if="tab.id === 'piutang'" class="px-1.5 py-0.2 rounded-full text-[9px] bg-white text-[#00a9c3] font-black uppercase">
               Tempo
             </span>
@@ -149,7 +148,6 @@
                 </div>
                 
                 <div class="flex items-center gap-2 flex-wrap" @click.stop>
-                  <!-- 1. Badge Verifikasi Pembayaran Admin -->
                   <span 
                     :class="[
                       'px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider',
@@ -159,7 +157,6 @@
                     {{ getPaymentStatusText(order) }}
                   </span>
 
-                  <!-- 2. Badge Status Pengiriman Logistik -->
                   <span 
                     :class="[
                       'px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider',
@@ -194,7 +191,6 @@
                 </div>
 
                 <div class="flex items-center gap-2" @click.stop>
-                  <!-- Tombol Upload Cepat jika belum ada bukti bayar -->
                   <button 
                     v-if="order.payment_status !== 'paid' && order.payment_method === 'transfer' && !order.payment_proof_id"
                     @click="openUploadDialog(order)"
@@ -203,7 +199,6 @@
                     + Upload Struk
                   </button>
 
-                  <!-- Tombol Buka Struk / Detail Lengkap -->
                   <button 
                     @click="openOrderDetail(order)"
                     class="px-4 py-2 rounded-xl border border-gray-300 text-gray-700 text-[11px] font-bold uppercase hover:border-[#00a9c3] hover:text-[#00a9c3] transition flex items-center gap-1.5 bg-white"
@@ -220,41 +215,41 @@
         </div>
 
         <!-- ============================================== -->
-        <!-- TAB BARU: PIUTANG & KREDIT TEMPO (PL & LEMBAGA) -->
+        <!-- TAB 3: PIUTANG & KREDIT TEMPO (PL & LEMBAGA)  -->
         <!-- ============================================== -->
         <div v-else-if="activeTab === 'piutang'" class="space-y-6">
           
           <!-- BANNER METRIK RINGKASAN KREDIT -->
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <!-- Saldo Hutang Berjalan -->
-            <div class="p-5 rounded-3xl bg-rose-50/60 border border-rose-200/80">
-              <span class="text-[10px] font-bold text-rose-500 uppercase tracking-wider block">Total Hutang Berjalan</span>
-              <p class="text-xl sm:text-2xl font-black text-rose-600 mt-1">{{ formatRupiah(totalRemainingDebt) }}</p>
-              <p class="text-[11px] text-gray-500 mt-1 font-medium">Dari {{ debtOrders.length }} faktur belanja tempo</p>
+            <!-- Total Hutang Berjalan -->
+            <div class="p-5 rounded-3xl bg-rose-50/70 border border-rose-200">
+              <span class="text-[10px] font-bold text-rose-500 uppercase tracking-wider block">Total Saldo Hutang Berjalan</span>
+              <p class="text-2xl font-black text-rose-600 mt-1">{{ formatRupiah(totalRemainingDebt) }}</p>
+              <p class="text-[11px] text-gray-500 mt-1 font-medium">Dari {{ debtOrders.length }} faktur tempo aktif</p>
             </div>
 
             <!-- Sisa Plafon Belanja -->
             <div class="p-5 rounded-3xl bg-[#00a9c3]/10 border border-[#00a9c3]/30">
               <span class="text-[10px] font-bold text-[#00a9c3] uppercase tracking-wider block">Sisa Plafon Belanja</span>
-              <p class="text-xl sm:text-2xl font-black text-[#00a9c3] mt-1">{{ formatRupiah(availableCreditLimit) }}</p>
-              <p class="text-[11px] text-gray-500 mt-1 font-medium">Batas belanja tempo yang tersedia</p>
+              <p class="text-2xl font-black text-[#00a9c3] mt-1">{{ formatRupiah(availableCreditLimit) }}</p>
+              <p class="text-[11px] text-gray-500 mt-1 font-medium">Batas sisa kredit yang tersedia</p>
             </div>
 
             <!-- Plafon Maksimal -->
             <div class="p-5 rounded-3xl bg-gray-50 border border-gray-200/80">
-              <span class="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Plafon Maksimal</span>
-              <p class="text-xl sm:text-2xl font-black text-gray-800 mt-1">{{ formatRupiah(userCreditLimit) }}</p>
-              <p class="text-[11px] text-gray-500 mt-1 font-medium">Batas limit kredit mitra ABC</p>
+              <span class="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Batas Plafon Kredit</span>
+              <p class="text-2xl font-black text-gray-800 mt-1">{{ formatRupiah(userCreditLimit) }}</p>
+              <p class="text-[11px] text-gray-500 mt-1 font-medium">Maksimal fasilitas kemitraan ABC</p>
             </div>
           </div>
 
-          <!-- PEMBERITAHUAN KEBIJAKAN FLEKSIBEL -->
-          <div class="p-4 rounded-2xl bg-white border border-[#00a9c3]/30 shadow-sm flex items-start gap-3">
+          <!-- PEMBERITAHUAN KEBIJAKAN FLEKSIBEL ABC JAKARTA -->
+          <div class="p-4 rounded-2xl bg-blue-50/80 border border-blue-100 shadow-sm flex items-start gap-3">
             <span class="text-xl shrink-0">🤝</span>
             <div class="text-xs">
-              <p class="font-bold text-gray-900">Cicilan Fleksibel Bebas Nominal & Waktu</p>
-              <p class="text-gray-500 mt-0.5 leading-relaxed">
-                Anda dapat menyetor cicilan berapapun tanpa denda atau bunga. Cukup transfer ke Bank Mandiri ABC Jakarta dan unggah foto struknya. Setoran akan diverifikasi manual oleh kasir.
+              <p class="font-bold text-gray-900">Kebijakan Cicilan Fleksibel ABC Jakarta</p>
+              <p class="text-gray-600 mt-0.5 leading-relaxed">
+                Pembayaran cicilan bersifat fleksibel tanpa bunga dan tanpa nominal tetap. Silakan transfer semampunya ke rekening resmi Bank Mandiri ABC Jakarta, lalu unggah foto bukti transfer. Kasir admin akan memverifikasi dan memotong saldo hutang Anda.
               </p>
             </div>
           </div>
@@ -271,7 +266,8 @@
           </div>
 
           <!-- KOSONG (LUNAS SEMUA) -->
-          <div v-if="debtOrders.length === 0" class="py-14 text-center border-2 border-dashed border-emerald-200 bg-emerald-50/30 rounded-3xl p-8 max-w-md mx-auto">
+          <!-- KOSONG (LUNAS SEMUA) -->
+<div v-if="debtOrders.length === 0 && totalRemainingDebt === 0" class="py-14 text-center border-2 border-dashed border-emerald-200 bg-emerald-50/30 rounded-3xl p-8 max-w-md mx-auto">
             <span class="text-4xl block mb-2">🎉</span>
             <p class="text-sm font-black text-emerald-800">Semua Tagihan Piutang Lunas</p>
             <p class="text-xs text-gray-500 mt-1 mb-4">Anda tidak memiliki tagihan piutang berjalan saat ini.</p>
@@ -280,7 +276,7 @@
             </NuxtLink>
           </div>
 
-          <!-- DAFTAR KARTU FAKTUR PIUTANG (DESAIN SAMA DENGAN BUYING) -->
+          <!-- DAFTAR KARTU FAKTUR PIUTANG -->
           <div v-else class="space-y-4">
             <div 
               v-for="order in debtOrders" 
@@ -298,17 +294,15 @@
                 </div>
                 
                 <div class="flex items-center gap-2" @click.stop>
-                  <!-- Badge Status Cicilan -->
                   <span 
                     :class="[
                       'px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider',
-                      (order.paid_amount || 0) > 0 ? 'bg-amber-50 text-amber-700 border border-amber-200' : 'bg-rose-50 text-rose-700 border border-rose-200'
+                      (order.total_amount - getRemainingDebt(order)) > 0 ? 'bg-amber-50 text-amber-700 border border-amber-200' : 'bg-rose-50 text-rose-700 border border-rose-200'
                     ]"
                   >
-                    {{ (order.paid_amount || 0) > 0 ? 'Sebagian Dicicil' : 'Belum Dicicil' }}
+                    {{ (order.total_amount - getRemainingDebt(order)) > 0 ? 'Sebagian Dicicil' : 'Belum Dicicil' }}
                   </span>
 
-                  <!-- Status Tempo -->
                   <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-[#00a9c3]/10 text-[#00a9c3] border border-[#00a9c3]/20">
                     Kredit Tempo
                   </span>
@@ -331,17 +325,17 @@
               </div>
 
               <!-- Baris Rincian Saldo Hutang -->
-              <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 p-3 bg-[#f8fafc] rounded-2xl border border-gray-100 text-xs">
+              <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 p-3.5 bg-[#f8fafc] rounded-2xl border border-gray-100 text-xs">
                 <div>
                   <span class="text-[10px] text-gray-400 uppercase font-bold block">Total Belanja Awal</span>
                   <span class="font-bold text-gray-700">{{ formatRupiah(order.total_amount) }}</span>
                 </div>
                 <div>
                   <span class="text-[10px] text-gray-400 uppercase font-bold block">Sudah Disetor</span>
-                  <span class="font-bold text-emerald-600">{{ formatRupiah(order.paid_amount || 0) }}</span>
+                  <span class="font-bold text-emerald-600">{{ formatRupiah(Math.max(0, Number(order.total_amount) - getRemainingDebt(order))) }}</span>
                 </div>
                 <div class="col-span-2 sm:col-span-1">
-                  <span class="text-[10px] text-rose-500 uppercase font-bold block">Sisa Hutang Berjalan</span>
+                  <span class="text-[10px] text-rose-500 uppercase font-bold block">Sisa Hutang Faktur</span>
                   <span class="font-black text-rose-600 text-sm">{{ formatRupiah(getRemainingDebt(order)) }}</span>
                 </div>
               </div>
@@ -352,14 +346,14 @@
                   <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-[#00a9c3]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
-                  <span>Transfer nominal bebas lalu upload struk di sini.</span>
+                  <span>Transfer nominal bebas semampunya, lalu lampirkan foto struk di sini.</span>
                 </div>
 
                 <div class="flex items-center gap-2">
                   <!-- Tombol Upload Bukti Cicilan -->
                   <button 
                     @click="openDebtPaymentDialog(order)"
-                    class="px-4 py-2 rounded-xl bg-[#00a9c3] text-white text-[11px] font-bold uppercase hover:bg-[#475c80] transition shadow-md shadow-[#00a9c3]/20 flex items-center gap-1.5"
+                    class="px-4 py-2 rounded-xl bg-[#00a9c3] text-white text-[11px] font-bold uppercase hover:bg-[#0092a8] transition shadow-md shadow-[#00a9c3]/20 flex items-center gap-1.5"
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
@@ -576,7 +570,7 @@
       </div>
     </div>
 
-    <!-- MODAL POPUP: STRUK RINCIAN PESANAN -->
+    <!-- MODAL POPUP: STRUK RINCIAN PESANAN (BUYING) -->
     <el-dialog 
       v-model="showDetailModal" 
       width="90%" 
@@ -696,10 +690,13 @@
       </template>
     </el-dialog>
 
-    <!-- MODAL KHUSUS: UPLOAD BUKTI SETOR CICILAN PIUTANG (TANPA KETIK NOMINAL) -->
+    <!-- ========================================================= -->
+    <!-- MODAL KHUSUS: UPLOAD BUKTI SETOR CICILAN PIUTANG          -->
+    <!-- (TANPA KETIK NOMINAL - STATUS MENJADI PENDING VERIFIKASI) -->
+    <!-- ========================================================= -->
     <el-dialog 
       v-model="showDebtModal" 
-      title="Setor Cicilan Piutang" 
+      title="Setor Pembayaran Cicilan Piutang" 
       width="90%" 
       class="max-w-md !rounded-3xl"
     >
@@ -712,63 +709,61 @@
             <b class="text-gray-900 font-mono">{{ orderForDebtPayment.order_number }}</b>
           </div>
           <div class="flex justify-between">
-            <span class="text-gray-500">Sisa Tagihan:</span>
+            <span class="text-gray-500">Sisa Tagihan Faktur:</span>
             <b class="text-rose-600 font-bold text-sm">{{ formatRupiah(getRemainingDebt(orderForDebtPayment)) }}</b>
           </div>
         </div>
 
-        <!-- Rekening Resmi ABC Jakarta -->
-        <div class="p-3.5 bg-[#00a9c3]/5 border border-[#00a9c3]/20 rounded-2xl space-y-2">
-          <p class="text-[10px] font-bold text-[#00a9c3] uppercase tracking-wider">Rekening Tujuan Transfer</p>
-          <div class="flex items-center justify-between bg-white p-2.5 rounded-xl border border-gray-200">
-            <div>
-              <p class="font-black text-gray-800 text-xs">Bank Mandiri</p>
-              <p class="font-mono font-bold text-[#00a9c3] text-xs">1240011223345</p>
-              <p class="text-[10px] text-gray-400">a.n Yayasan Advent Jakarta</p>
-            </div>
+        <!-- Rekening Resmi Bank Mandiri ABC Jakarta (Sama dengan Checkout) -->
+        <div class="p-4 rounded-2xl bg-slate-900 text-white space-y-1 shadow-md">
+          <span class="text-[9px] text-gray-400 uppercase tracking-widest font-bold block">Tujuan Transfer Cicilan:</span>
+          <p class="text-xs text-gray-300 font-sans">Bank Mandiri (KCP Jakarta Tebet)</p>
+          <div class="flex items-center justify-between pt-1">
+            <p class="text-sm font-black text-[#00a9c3] font-mono tracking-wider">123-00-0987654-3</p>
             <button 
               @click="copyBankNumber"
               type="button" 
-              class="px-2.5 py-1 bg-[#00a9c3] text-white rounded-lg font-bold text-[10px] hover:bg-[#475c80] transition"
+              class="px-2.5 py-1 bg-white/10 hover:bg-white/20 text-white rounded-lg font-bold text-[10px] transition"
             >
               {{ copiedBankText }}
             </button>
           </div>
+          <p class="text-[10px] text-gray-400">a.n. Adventist Book Center</p>
+        </div>
+
+        <!-- Informasi Pembayaran Fleksibel -->
+        <div class="p-3 bg-blue-50/80 rounded-xl border border-blue-100 text-[11px] text-blue-900 leading-relaxed flex items-start gap-2">
+          <span class="text-sm">💡</span>
+          <span>Anda <b>tidak perlu mengetik nominal pembayaran</b>. Silakan transfer sejumlah dana semampunya ke rekening di atas, lalu lampirkan foto struk transfer di bawah. Kasir admin ABC Jakarta akan memverifikasi mutasi bank dan memotong saldo hutang Anda.</span>
         </div>
 
         <!-- Upload File Bukti Transfer -->
         <div>
           <label class="block text-gray-700 font-bold mb-1.5">
-            Foto Struk / Bukti Transfer: <span class="text-rose-500">*</span>
+            Unggah Foto Struk Transfer Cicilan: <span class="text-rose-500">*</span>
           </label>
           <input 
             type="file" 
             accept="image/*" 
             @change="handleDebtFileChange" 
-            class="w-full text-xs text-gray-500 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-[#00a9c3]/10 file:text-[#00a9c3] cursor-pointer" 
+            class="w-full text-xs text-gray-500 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-[#00a9c3]/10 file:text-[#00a9c3] cursor-pointer bg-white p-2 border border-gray-200 rounded-xl" 
           />
         </div>
 
         <!-- Preview Struk -->
-        <div v-if="debtPreviewImage" class="text-center">
-          <img :src="debtPreviewImage" class="max-h-40 mx-auto rounded-xl border border-gray-200 object-contain" />
+        <div v-if="debtPreviewImage" class="text-center pt-1">
+          <img :src="debtPreviewImage" class="max-h-44 mx-auto rounded-xl border border-gray-200 object-contain shadow-sm bg-gray-50 p-1" />
         </div>
 
-        <!-- Catatan Tambahan -->
+        <!-- Catatan Tambahan (Opsional) -->
         <div>
-          <label class="block text-gray-700 font-bold mb-1">Catatan / Keterangan (Opsional):</label>
+          <label class="block text-gray-700 font-bold mb-1">Catatan Setoran (Opsional):</label>
           <input 
             v-model="debtPaymentNotes" 
             type="text" 
-            placeholder="Contoh: Setoran cicilan penjualan buku literasi..." 
-            class="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs focus:border-[#00a9c3] outline-none" 
+            placeholder="Contoh: Cicilan tahap 1 transfer via Rekening Budi..." 
+            class="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-xs focus:border-[#00a9c3] outline-none transition" 
           />
-        </div>
-
-        <!-- Notifikasi Status Pending -->
-        <div class="p-3 bg-amber-50 rounded-xl border border-amber-200 text-[11px] text-amber-800 flex items-start gap-2">
-          <span>ℹ️</span>
-          <span>Setelah dikirim, status cicilan akan <b>Menunggu Verifikasi Admin</b>. Kasir akan mengecek mutasi dan sisa hutang akan otomatis berkurang.</span>
         </div>
 
       </div>
@@ -783,7 +778,7 @@
             class="!bg-[#00a9c3] !border-none !rounded-xl font-bold" 
             @click="submitDebtPayment"
           >
-            Kirim Bukti Pembayaran
+            Kirim Bukti Cicilan (Pending)
           </el-button>
         </div>
       </template>
@@ -836,7 +831,7 @@ const router = useRouter()
 const { authUser, checkProfile } = useAuth()
 const { apiFetch, uploadAttachment, getErrorMessage } = useApi()
 
-// Cek apakah User adalah Lembaga atau PL (Penginjil Literatur)
+// Cek apakah User adalah Lembaga (Gereja, Sekolah) atau Penginjil Literatur (PL)
 const isLembagaOrPL = computed(() => {
   const type = authUser.value?.customer?.type?.toLowerCase() || ''
   return ['penginjil', 'gereja', 'sekolah'].includes(type)
@@ -899,53 +894,67 @@ const ordersLoading = ref(false)
 const fetchOrders = async () => {
   ordersLoading.value = true
   try {
-    const res = await apiFetch('/orders')
-    orders.value = res?.data || res || []
+    const res = await apiFetch('/orders', {
+      headers: {
+        Accept: 'application/json'
+      }
+    })
+    
+    // Tangani semua kemungkinan struktur respons Laravel (array langsung, res.data, atau paginasi res.data.data)
+    if (Array.isArray(res)) {
+      orders.value = res
+    } else if (res && Array.isArray(res.data)) {
+      orders.value = res.data
+    } else if (res && res.data && Array.isArray(res.data.data)) {
+      orders.value = res.data.data
+    } else {
+      orders.value = []
+    }
   } catch (err) {
-    console.warn('Gagal memuat pesanan:', err)
+    console.error('Gagal memuat pesanan:', err)
     orders.value = []
   } finally {
     ordersLoading.value = false
   }
 }
 
-onMounted(() => {
-  if (activeTab.value === 'buying' || activeTab.value === 'piutang') {
-    fetchOrders()
-  }
-})
-
-watch(activeTab, (tab) => {
-  if (tab === 'buying' || tab === 'piutang') {
-    fetchOrders()
-  }
-})
-
 // ==========================================
 // LOGIKA KHUSUS TAB PIUTANG
 // ==========================================
-// Pesanan Tempo yang masih memiliki sisa tagihan (remaining debt > 0)
-const debtOrders = computed(() => {
-  return orders.value.filter(order => {
-    const isCreditOrder = order.payment_method === 'tempo' || order.payment_method === 'kredit' || order.is_tempo
-    const remaining = getRemainingDebt(order)
-    return isCreditOrder && remaining > 0
-  })
-})
-
+// Hitung sisa hutang per faktur
 const getRemainingDebt = (order) => {
   if (!order) return 0
+  if (order.remaining_amount !== undefined && order.remaining_amount !== null) {
+    return Number(order.remaining_amount)
+  }
   const total = Number(order.total_amount || 0)
   const paid = Number(order.paid_amount || 0)
   return Math.max(0, total - paid)
 }
 
+// Daftar Faktur Tempo Aktif yang masih memiliki sisa tagihan
+const debtOrders = computed(() => {
+  return orders.value.filter(order => {
+    const isCreditOrder = order.payment_method === 'kredit' || order.payment_method === 'credit' || order.payment_method === 'tempo' || order.is_tempo
+    const remaining = getRemainingDebt(order)
+    const isNotPaid = order.payment_status !== 'paid' && order.payment_status !== 'cancelled'
+    return isCreditOrder && remaining > 0 && isNotPaid
+  })
+})
+
+// Total Saldo Hutang Berjalan: Otomatis membaca current_debt akun (Rp 240.000) atau total sisa faktur
 const totalRemainingDebt = computed(() => {
+  const customerDebt = Number(authUser.value?.customer?.current_debt)
+  if (!isNaN(customerDebt) && customerDebt > 0) return customerDebt
   return debtOrders.value.reduce((acc, curr) => acc + getRemainingDebt(curr), 0)
 })
 
+// Plafon Kredit: PL = 5 Juta, Lembaga (Gereja/Sekolah) = 10 Juta
 const userCreditLimit = computed(() => {
-  return Number(authUser.value?.credit_limit || authUser.value?.customer?.credit_limit || 7500000)
+  const customLimit = Number(authUser.value?.customer?.credit_limit)
+  if (!isNaN(customLimit) && customLimit > 0) return customLimit
+  const type = authUser.value?.customer?.type?.toLowerCase()
+  return type === 'penginjil' ? 5000000 : 10000000
 })
 
 const availableCreditLimit = computed(() => {
@@ -961,7 +970,6 @@ const debtPaymentNotes = ref('')
 const uploadingDebtProof = ref(false)
 const copiedBankText = ref('Salin No. Rekening')
 
-// Riwayat Setoran Cicilan Lokal / Server
 const debtPaymentHistory = ref([])
 
 const openDebtPaymentDialog = (order) => {
@@ -982,11 +990,13 @@ const handleDebtFileChange = (e) => {
 }
 
 const copyBankNumber = () => {
-  navigator.clipboard.writeText('1240011223345')
-  copiedBankText.value = 'Tersalin! ✅'
-  setTimeout(() => {
-    copiedBankText.value = 'Salin No. Rekening'
-  }, 2000)
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText('123-00-0987654-3')
+    copiedBankText.value = 'Tersalin! ✅'
+    setTimeout(() => {
+      copiedBankText.value = 'Salin No. Rekening'
+    }, 2000)
+  }
 }
 
 // Submit Bukti Cicilan -> Status Masuk Pending Admin
@@ -995,42 +1005,35 @@ const submitDebtPayment = async () => {
 
   uploadingDebtProof.value = true
   try {
-    // 1. Upload file struk ke server
+    // 1. Upload file foto struk ke server
     const attachment = await uploadAttachment(debtSelectedFile.value, {
       attachmentableType: 'order',
       attachmentableId: orderForDebtPayment.value.id,
       type: 'debt_payment_proof'
     })
 
-    // 2. Simpan pembayaran cicilan via API
-    try {
-      await apiFetch(`/orders/${orderForDebtPayment.value.id}/pay`, {
-        method: 'POST',
-        body: {
-          payment_proof_id: attachment.id,
-          notes: debtPaymentNotes.value
-        }
-      })
-    } catch (e) {
-      // Fallback jika route /pay belum ada di backend
-      await apiFetch(`/orders/${orderForDebtPayment.value.id}`, {
-        method: 'PUT',
-        body: { payment_proof_id: attachment.id }
-      })
-    }
+    // 2. Hubungkan bukti bayar ke pesanan
+    await apiFetch(`/orders/${orderForDebtPayment.value.id}`, {
+      method: 'PUT',
+      body: {
+        payment_proof_id: attachment.id,
+        notes: debtPaymentNotes.value ? `[Cicilan]: ${debtPaymentNotes.value}` : orderForDebtPayment.value.notes
+      }
+    })
 
     // Catat ke daftar riwayat lokal
     debtPaymentHistory.value.unshift({
       order_number: orderForDebtPayment.value.order_number,
       date: new Date().toISOString(),
       proof_url: debtPreviewImage.value,
-      notes: debtPaymentNotes.value,
+      notes: debtPaymentNotes.value || 'Setoran cicilan tempo fleksibel',
       status: 'Menunggu Verifikasi Admin'
     })
 
-    ElMessage.success('Bukti setoran cicilan berhasil dikirim! Menunggu verifikasi admin.')
+    ElMessage.success('Bukti setoran cicilan berhasil dikirim! Menunggu verifikasi kasir admin ABC.')
     showDebtModal.value = false
     await fetchOrders()
+    if (checkProfile) await checkProfile()
   } catch (err) {
     ElMessage.error(getErrorMessage(err, 'Gagal mengunggah bukti cicilan.'))
   } finally {
@@ -1039,7 +1042,7 @@ const submitDebtPayment = async () => {
 }
 
 // ==========================================
-// MODAL DETAIL STRUK PESANAN
+// MODAL DETAIL STRUK PESANAN (BUYING)
 // ==========================================
 const showDetailModal = ref(false)
 const selectedOrder = ref(null)
@@ -1146,7 +1149,7 @@ const submitPaymentProof = async () => {
 }
 
 // ==========================================
-// LOGIKA SETTINGS: 1. UPDATE KONTAK & ALAMAT
+// SETTINGS: 1. UPDATE KONTAK & ALAMAT
 // ==========================================
 const profileForm = reactive({
   phone: authUser.value?.customer?.phone || '',
@@ -1171,7 +1174,7 @@ const handleUpdateProfile = async () => {
 }
 
 // ==========================================
-// LOGIKA SETTINGS: 2. GANTI PASSWORD
+// SETTINGS: 2. GANTI PASSWORD (TOGGLE MATA)
 // ==========================================
 const passwordForm = reactive({
   current_password: '',
